@@ -68,13 +68,7 @@
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>${log4j.version}</version>
-    </dependency>   
-    
-<!--     <dependency> -->
-<!--         <groupId>org.josfranmc.gutenberg</groupId> -->
-<!--         <artifactId>JGutenbergCatalog</artifactId> -->
-<!--         <version>0.0.1-SNAPSHOT</version> -->
-<!--     </dependency> -->
+    </dependency>
     
     <dependency>
         <groupId>junit</groupId>
@@ -106,32 +100,32 @@
 			    <configuration>
 			        <archive>
 			            <manifest>
-<!-- 			                <addClasspath>true</addClasspath> -->
-<!-- 			                <classpathPrefix>lib/</classpathPrefix> -->
+			                <addClasspath>true</addClasspath>
+			                <classpathPrefix>lib/</classpathPrefix>
 			                <mainClass>org.josfranmc.collocatio.client.JCollocatioClient</mainClass>
 			            </manifest>
 			        </archive>
 			    </configuration>
 			</plugin>   
 			
-<!-- 			<plugin> -->
-<!-- 			    <groupId>org.apache.maven.plugins</groupId> -->
-<!-- 			    <artifactId>maven-dependency-plugin</artifactId> -->
-<!-- 			    <executions> -->
-<!-- 			        <execution> -->
-<!-- 			            <id>copy</id> -->
-<!-- 			            <phase>install</phase> -->
-<!-- 			            <goals> -->
-<!-- 			                <goal>copy-dependencies</goal> -->
-<!-- 			            </goals> -->
-<!-- 			            <configuration> -->
-<!-- 			                <outputDirectory> -->
-<!-- 			                  ${project.build.directory}/lib -->
-<!-- 			                </outputDirectory> -->
-<!-- 			            </configuration> -->
-<!-- 			        </execution> -->
-<!-- 			    </executions> -->
-<!-- 			</plugin>			   		 -->
+			<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-dependency-plugin</artifactId>
+			    <executions>
+			        <execution>
+			            <id>copy</id>
+			            <phase>install</phase>
+			            <goals>
+			                <goal>copy-dependencies</goal>
+			            </goals>
+			            <configuration>
+			                <outputDirectory>
+			                  ${project.build.directory}/lib
+			                </outputDirectory>
+			            </configuration>
+			        </execution>
+			    </executions>
+			</plugin>			   		
       		
       		<!-- Para crear un jar con todas las dependencias incluidas en él -->
 <!--             <plugin> -->
