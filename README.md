@@ -8,7 +8,8 @@ El programa hace uso del analizador de Stanford (The Stanford Parser) para la ex
 
 mvn install:install-file –Dfile=stanford-parser-3.9.1-models.jar -DgroupId=edu.stanford.nlp -DartifactId=stanford-parser-3.9.1-models -Dversion=3.9.1 -Dpackaging=jar
 
-Más en: https://nlp.stanford.edu/software/lex-parser.shtml
+El jar stanford-parser-3.9.1-models.jar puede obtenerse en el apartado Download de la página:  
+https://nlp.stanford.edu/software/lex-parser.shtml
 
 
 ## Base de datos
