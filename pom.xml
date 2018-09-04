@@ -80,7 +80,7 @@
   
   
   <build>
-      <finalName>JCollocatio</finalName>
+      <finalName>JCollocatio-1.0</finalName>
       <plugins>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
