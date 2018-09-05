@@ -18,3 +18,6 @@ https://nlp.stanford.edu/software/lex-parser.shtml
 Para el almacenamiento de las colocaciones extraidas se utiliza una base de datos MySQL 8.0.  
 En la carpeta database se encuentra un script que permite configurar el entorno de base de datos. Debemos conectarnos como root a nuestra base de datos y ejecutar el script.  
 En caso de que la base de datos se ubique en un equipo distinto al que ejecuta el programa y no pueda ser referenciado como localhost, se debe modificar el fichero de propiedades DBPool.properties ubicado en src/main/resources/db para indicar la dirección del host. 
+
+## Uso
+En la carpeta jar-flat se encuentra el jar de la aplicación junto a las dependencias necesarias, que se ubican en la carpeta lib. En esta carpeta lib hay que añadir el jar stanford-parser-3.9.1-models.jar
