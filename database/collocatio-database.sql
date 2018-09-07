@@ -1,6 +1,38 @@
 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL,ALLOW_INVALID_DATES';
+
+-- -----------------------------------------------------
+-- Schema col_default_test
+-- -----------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS `col_default_test` DEFAULT CHARACTER SET utf8 ;
+USE `col_default_test` ;
+-- -----------------------------------------------------
+-- Table `col_default_test`.`col_collocatio`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `col_default_test`.`col_collocatio` (
+  `ID` INT NOT NULL AUTO_INCREMENT COMMENT 'Identificador de la colocación',
+  `DEPENDENCIA` VARCHAR(30) NOT NULL COMMENT 'Tipo de dependencia',
+  `PALABRA1` VARCHAR(500) NOT NULL COMMENT 'Palabra 1 de la tripleta',
+  `PALABRA2` VARCHAR(500) NOT NULL COMMENT 'Palabra 1 de la tripleta',
+  `INFOMUTUA` DOUBLE NULL COMMENT 'Valor información mutua',
+  PRIMARY KEY (`ID`))
+ENGINE = InnoDB
+COMMENT = 'Colocaciones - test';
+-- -----------------------------------------------------
+-- Table `col_default_test`.`col_aparece`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `col_default_test`.`col_aparece` (
+  `IDCOL` INT NOT NULL COMMENT 'Identificador de la colocación',
+  `IDLIB` VARCHAR(45) NOT NULL COMMENT 'Identificador del libro',
+  CONSTRAINT `fk_collo_libros`
+    FOREIGN KEY (`IDCOL`)
+    REFERENCES `col_default_test`.`col_collocatio` (`ID`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB
+COMMENT = 'Libros en los que aparece cada colocación -test';
+
 -- -----------------------------------------------------
 -- Schema col_default
 -- -----------------------------------------------------
@@ -48,6 +80,9 @@ COMMENT = 'Libros en los que aparece cada colocación';
 CREATE USER 'collocatio' IDENTIFIED BY 'colocolo9';
 GRANT ALL PRIVILEGES ON `col_%`.* TO 'collocatio';
 FLUSH PRIVILEGES;
+
+INSERT INTO `col_default`.`col_registro` (NOMBRE, DESCRIPCION, FECALT) VALUES('col_default', 'Base de datos por defecto', now());
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
