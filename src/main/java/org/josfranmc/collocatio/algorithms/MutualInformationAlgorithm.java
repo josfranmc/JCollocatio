@@ -1,4 +1,4 @@
-package org.josfranmc.collocatio.algorithms;
+﻿package org.josfranmc.collocatio.algorithms;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -260,7 +260,7 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 * @return conexión a la base de datos
 	 */
 	private Connection getConnection(boolean autocommit) {
-		Connection connection = ConnectionFactory.getInstance(getDataBaseName()).getConnection(getDataBaseName());
+		Connection connection = ConnectionFactory.getInstance(getDataBaseName()).getConnection();
 		try {
 			connection.setAutoCommit(autocommit);
 		} catch (SQLException e) {

@@ -53,8 +53,7 @@ public class ConnectionFactory {
 	/**
 	 * Referencias a los objetos que gestionan el acceso a la base de datos. Una por cada base de datos a utilizar.
 	 */
-	private static Map<String, IDBConnection> dbConnections = new HashMap<String, IDBConnection>();
-	
+	private IDBConnection dbConnections;
 
 	/**
 	 * Constructor. Crea una instancia de la clase a utilizar para conectarse a la base de datos indicada. El tipo de la clase que se instancia
@@ -70,26 +69,17 @@ public class ConnectionFactory {
 			Constructor<?> constructor = c.getDeclaredConstructor(String.class);
 			constructor.setAccessible(true);
 			IDBConnection dbConnection = (IDBConnection) constructor.newInstance(dbName);
-			dbConnections.put(dbName, dbConnection);
+			dbConnections = dbConnection; // .put(dbName, dbConnection);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
 	/**
-	 * @return una conexión a la base de datos por defecto
+	 * @return una conexión a la base de datos usada por la instancia
 	 */
 	public Connection getConnection() {
-		return getConnection(ConnectionFactory.DEFAULT_DB);
-	}
-
-	/**
-	 * Devuelve una conexión a la base de datos indicada.
-	 * @param dbName nombre de la base de datos de la que obtener una conexión
-	 * @return conexión a la base de datos
-	 */
-	public Connection getConnection(String dbName) {
-		return dbConnections.get(dbName).getConnection();
+		return dbConnections.getConnection();
 	}
 	
 	/**

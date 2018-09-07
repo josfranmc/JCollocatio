@@ -37,15 +37,14 @@ public class CollocatioDao implements ICollocatioDao {
 	 */
 	public CollocatioDao() {
 		setDataBase(ConnectionFactory.DEFAULT_DB);
-
 	}
 	
 	/**
 	 * @return una conexión a la base de datos
 	 */
 	private Connection getConnection() {
-		Connection connection = ConnectionFactory.getInstance(this.dbName).getConnection(this.dbName);
-		log.debug("Accediendo a " + this.dbName);
+		Connection connection = ConnectionFactory.getInstance(this.dbName).getConnection();
+		log.info("Accediendo a " + this.dbName);
 		return connection;
 	}
 	
