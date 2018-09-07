@@ -1,6 +1,6 @@
 package org.josfranmc.collocatio.db;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -16,8 +16,8 @@ public class ConnectionFactoryTest {
 	 */
 	@Test
 	public void testConnectionFactoryDefaultConnection() {
-		ConnectionFactory cf = ConnectionFactory.getInstance();
-		assertNotNull("No se ha obtenido conexión a db por defecto", cf.getConnection());
+		ConnectionFactory.getInstance();
+		assertTrue("No se ha obtenido conexión a db por defecto", ConnectionFactory.isInstance(ConnectionFactory.DEFAULT_DB));
 	}
 	
 	/**
@@ -25,7 +25,7 @@ public class ConnectionFactoryTest {
 	 */
 	@Test
 	public void testConnectionFactoryOtherConnection() {
-		ConnectionFactory cf = ConnectionFactory.getInstance("col_default");
-		assertNotNull("No se ha obtenido conexión a db indicada", cf.getConnection());
+		ConnectionFactory.getInstance("col_default");
+		assertTrue("No se ha obtenido conexión a db indicada", ConnectionFactory.isInstance("col_default"));
 	}
 }
