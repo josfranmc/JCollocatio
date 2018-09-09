@@ -122,46 +122,46 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 		if (triplesCollection.getTotalTriples() > 0) {
 			log.info("Inicio cálculo información mutua " + getCurrentTime());
 			log.info("Guardar en base de datos: " + this.isSaveInDB());
-			int totalThreads = 0;
-			ExecutorService executorService = null;
-			try {
-				executorService = getExecutorService();
-				final ExecutorCompletionService<TriplesData> completionService = new ExecutorCompletionService<>(executorService);
-				log.info("Calculando datos de frecuencia...");
-				for (String dependency : triplesCollection.getDependenciesCollection()) {
-					if (isSelectedDependency(dependency)) {
-						ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(triplesCollection.getTriplesCollection(), dependency);
-						completionService.submit(etdt);
-						totalThreads++;
+			if (prepareDataBase()) {
+				int totalThreads = 0;
+				ExecutorService executorService = null;
+				try {
+					executorService = getExecutorService();
+					final ExecutorCompletionService<TriplesData> completionService = new ExecutorCompletionService<>(executorService);
+					log.info("Calculando datos de frecuencia...");
+					for (String dependency : triplesCollection.getDependenciesCollection()) {
+						if (isSelectedDependency(dependency)) {
+							ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(triplesCollection.getTriplesCollection(), dependency);
+							completionService.submit(etdt);
+							totalThreads++;
+						}
 					}
+		
+					log.info("Calculando valor de información mutua para tripletas...");
+					final long totalTriples = triplesCollection.getTotalTriples();
+					for(int i = 0; i < totalThreads; i++) {
+					    final Future<TriplesData> resultTask = completionService.take();
+					    TriplesData data = null;
+					    try {
+					    	data = resultTask.get();
+					    	data.setTotalTriples(totalTriples);
+					    	data.setAdjustedFrequency(getAdjustedFrequency());
+					        CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(data, getConnection(false));
+					        executorService.submit(cmit);
+					    } catch (ExecutionException e) {
+					        log.warn("Incidencia ", e.getCause());
+					        log.warn("dependencia: " + data.getDependency());
+					    }
+					}
+
+				    executorService.shutdown();
+				    while (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {}
+		
+				} catch (Exception e) {
+					executorService.shutdown();
+					log.error(e);
+					e.printStackTrace();			
 				}
-				
-				prepareDataBase();
-	
-				log.info("Calculando valor de información mutua para tripletas...");
-				final long totalTriples = triplesCollection.getTotalTriples();
-				for(int i = 0; i < totalThreads; i++) {
-				    final Future<TriplesData> resultTask = completionService.take();
-				    TriplesData data = null;
-				    try {
-				    	data = resultTask.get();
-				    	data.setTotalTriples(totalTriples);
-				    	data.setAdjustedFrequency(getAdjustedFrequency());
-				        CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(data, getConnection(false));
-				        executorService.submit(cmit);
-				    } catch (ExecutionException e) {
-				        log.warn("Incidencia ", e.getCause());
-				        log.warn("dependencia: " + data.getDependency());
-				    }
-				}
-				
-			    executorService.shutdown();
-			    while (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {}
-	
-			} catch (Exception e) {
-				executorService.shutdown();
-				log.error(e);
-				e.printStackTrace();			
 			}
 		} else {
 			log.info("No hay datos que calcular");
@@ -206,21 +206,30 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	
 	/**
 	 * Prepara la base de datos a utilizar. Si se usa la base de datos por defecto se borra su contenido.
+	 * @return <i>true</i> si se ha podido conectar a la base de datos y prepararla, <i>false</i> en caso contrario
 	 */
-	private void prepareDataBase() {
+	private boolean prepareDataBase() {
+		boolean result = false;
 		if (isSaveInDB()) {
 			String dbName = this.getDataBaseName();
 			if (dbName == null || dbName.equals(ConnectionFactory.DEFAULT_DB)) {
-				deletePreviousContent();
+				Connection connection = ConnectionFactory.getInstance().getConnection();
+				if (connection != null) {
+					deletePreviousContent(connection);
+					result = true;
+				} else {
+					log.error("No se ha podido conectar a la base de datos.");
+				}
 			}
 		}
+		return result;
 	}
 	
 	/**
 	 * Borra el contenido de las tablas de la base de datos por defecto (col_default)
+	 * @param connection conexión a la base de datos
 	 */
-	private void deletePreviousContent() {
-		Connection connection = ConnectionFactory.getInstance().getConnection();
+	private void deletePreviousContent(Connection connection) {
 		PreparedStatement pstatement = null;
 		try {
 			pstatement = connection.prepareStatement("DELETE FROM col_aparece");
