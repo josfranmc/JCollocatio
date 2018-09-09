@@ -1,4 +1,4 @@
-﻿package org.josfranmc.collocatio.algorithms;
+package org.josfranmc.collocatio.algorithms;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -68,12 +68,6 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	private List<String> triplesFilter = null;
 	
 	/**
-	 * Encapsula una colección de tripletas
-	 * @see TriplesCollection
-	 */
-	private TriplesCollection triplesCollection = null;
-	
-	/**
 	 * Si se debe guardar en base de datos o no
 	 */
 	private boolean saveInDB = true;
@@ -102,13 +96,13 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 * el cual encapsula el conjunto de tripletas que se han obtenido
 	 */
 	@Override
-	protected void extractTriples() {
+	protected TriplesCollection extractTriples() {
 		StanfordTriplesExtractor ste = new StanfordTriplesExtractor();
 		ste.setModel(getModel());
 		ste.setTextsPathToProcess(getTextsPathToProcess());
 		ste.setTotalThreads(getTotalThreads());
 		ste.setStanfordOptions(getStanfordOptions());
-		this.triplesCollection = ste.extractTriples();
+		return ste.extractTriples();
 	}
 
 	/**
@@ -124,9 +118,10 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 */
 	@SuppressWarnings("null")
 	@Override
-	protected void calculateMutualInformation() {
-		if (this.triplesCollection.getTotalTriples() > 0) {
+	protected void calculateMutualInformation(TriplesCollection triplesCollection) {
+		if (triplesCollection.getTotalTriples() > 0) {
 			log.info("Inicio cálculo información mutua " + getCurrentTime());
+			log.info("Guardar en base de datos: " + this.isSaveInDB());
 			int totalThreads = 0;
 			ExecutorService executorService = null;
 			try {
@@ -152,7 +147,7 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 				    	data = resultTask.get();
 				    	data.setTotalTriples(totalTriples);
 				    	data.setAdjustedFrequency(getAdjustedFrequency());
-				        CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(data, getConnection(false), isSaveInDB());
+				        CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(data, getConnection(false));
 				        executorService.submit(cmit);
 				    } catch (ExecutionException e) {
 				        log.warn("Incidencia ", e.getCause());
@@ -257,14 +252,21 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 * Obtiene una conexión a la base de datos que se esté usando.<p>
 	 * Permite especificar si se quiere un comportamiento transaccional desactivando la opción de autocommit.
 	 * @param autocommit <i>true</i> si se quiere hacer commit tras cada inserción en la base de datos, <i>false</i> en caso contrario
-	 * @return conexión a la base de datos
+	 * @return conexión a la base de datos, null si no se ha podido obtener
 	 */
 	private Connection getConnection(boolean autocommit) {
-		Connection connection = ConnectionFactory.getInstance(getDataBaseName()).getConnection();
-		try {
-			connection.setAutoCommit(autocommit);
-		} catch (SQLException e) {
-			e.printStackTrace();
+		Connection connection = null;
+		if (this.isSaveInDB()) { 
+			connection = ConnectionFactory.getInstance(getDataBaseName()).getConnection();
+			if (connection != null) {
+				try {
+					connection.setAutoCommit(autocommit);
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			} else {
+				log.error("No se ha podido obtener conexión a la base de datos");
+			}
 		}
 		return connection;
 	}

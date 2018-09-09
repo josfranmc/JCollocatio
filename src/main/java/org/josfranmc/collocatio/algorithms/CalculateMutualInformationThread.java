@@ -27,7 +27,7 @@ import com.mysql.cj.jdbc.exceptions.MysqlDataTruncation;
  * @see TriplesData
  */
 public class CalculateMutualInformationThread implements Runnable{
-
+long saves = 0;long llames = 0;long post = 0;
 	private static final Logger log = Logger.getLogger(CalculateMutualInformationThread.class);
 
 	/**
@@ -52,10 +52,10 @@ public class CalculateMutualInformationThread implements Runnable{
 	 * @param totalTriples número total de tripletas que se han obtenido (todas las tripletas de todos los tipos de dependencia posibles)
 	 * @see TriplesData
 	 */
-	CalculateMutualInformationThread(TriplesData data, Connection connection, boolean saveDB) {
+	CalculateMutualInformationThread(TriplesData data, Connection connection) {
 		this.data = data;
 		this.connection = connection;
-		this.saveDB = saveDB;
+		this.saveDB = (connection == null) ? false : true;
 	}
 
 	/**
@@ -80,9 +80,9 @@ public class CalculateMutualInformationThread implements Runnable{
 	private void closePreparedStatement(PreparedStatement pstatement) {
 		try {
 			pstatement.close();
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
-		}
+		} 
 	}
 	
 	/**
@@ -98,7 +98,7 @@ public class CalculateMutualInformationThread implements Runnable{
 		long totalTriplesByDependencyAndWord2 = 0;                          // total de ocurrencias de la palabra 2 de un tripleta de un tipo de dependencia concreto
 		
 		PreparedStatement pstatement = getPreparedStatementToCollocations();
-		
+		log.info("Inicio hilo para guardar tripletas de dependencia " + data.getDependency());
 		for (Entry<Triple, TripleEvents> entry : data.getTriplesMap().entrySet()) {
 			
 			// tripleta sobre la que calcular su valor de inforamción mutua
@@ -133,15 +133,18 @@ public class CalculateMutualInformationThread implements Runnable{
 			triple.setMutualInformation(mutualInformation);
 			
 			if (isSaveDB()) {
+				llames++;
 				long generatedId = saveCollocation(triple, pstatement);
 				if (generatedId > 0) {
 					saveBooks(events.getBooks(), generatedId);
 				}
+				post++;
 			}
 			log.debug("------");	
 		}
 		closePreparedStatement(pstatement);
 		closeConnection();
+		log.info("Fin hilo dependencia " + data.getDependency() + " | llames = " + llames + "  saves = " + saves + "  post = " + post);
 	}
 
 	/**
@@ -172,6 +175,7 @@ public class CalculateMutualInformationThread implements Runnable{
 				if (generatedKeys.next()) {
 					generatedId = generatedKeys.getLong(1);
 				}
+				saves++;
 			} else {
 				log.error("No se pudo guardar " + triple.getDependency() + ":" + triple.getWord1() + ":" + triple.getWord2());
 			}
@@ -200,6 +204,7 @@ public class CalculateMutualInformationThread implements Runnable{
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
+		log.info("Intentándolo otra vez");
 		long generatedId = 0;
 		try {
 			pstatement.setString(1, triple.getDependency());
@@ -215,9 +220,10 @@ public class CalculateMutualInformationThread implements Runnable{
 			} else {
 				log.error("No se pudo guardar " + triple.getDependency() + ":" + triple.getWord1() + ":" + triple.getWord2());
 			}
+			saves++;
 		} catch (Exception e) {
-			log.error(e);
 			log.error("No se ha podido guardar por segunda vez");
+			log.error(e);
 		} 
 		return generatedId;
 	}
@@ -278,7 +284,8 @@ public class CalculateMutualInformationThread implements Runnable{
 					connection.commit();
 					connection.close();
 				}
-			} catch (SQLException e) {
+			} catch (Exception e) {
+				log.error(e);
 				e.printStackTrace();
 			}
 		}

@@ -42,9 +42,9 @@ public class CalculateMutualInformationThreadTest {
 	public void testCalculateMutualInformationOneThread() {
 		prepareDataBaseTest();
 		final ExecutorService executorService = getExecutorService(1);
-		CalculateMutualInformationThread cmiThread1 = new CalculateMutualInformationThread(getTriplesDataForThread1(), getConnection(), true);
+		CalculateMutualInformationThread cmiThread1 = new CalculateMutualInformationThread(getTriplesDataForThread1(), getConnection());
 		executorService.submit(cmiThread1);
-		CalculateMutualInformationThread cmiThread2 = new CalculateMutualInformationThread(getTriplesDataForThread2(), getConnection(), true);
+		CalculateMutualInformationThread cmiThread2 = new CalculateMutualInformationThread(getTriplesDataForThread2(), getConnection());
 		executorService.submit(cmiThread2);		
 		executorService.shutdown();
 		try {
