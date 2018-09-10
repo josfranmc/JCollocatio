@@ -2,6 +2,10 @@
 Permite ejecutar algoritmos para realizar la extracción de colocaciones de un conjunto de textos.  
 Por ahora solo dispone de la implementación de un algoritmo basado en el cálculo del valor de información mutua entre dos palabras.
 
+## Contenido
++ database: script para creación de base de datos en MySQL
++ jar-flat: fichero jar con las clases de la aplicación junto a las dependencias necesarias, que se ubican en la carpeta lib
++ src: código fuente
 
 ## Stanford Parser
 El programa hace uso del analizador de Stanford (The Stanford Parser) para la extracción de tripletas. El paquete principal se incluyen en el proyecto como una dependencia más que Maven gestiona. Sin embargo, el jar con los models de los idiomas sopartados no se encuentra en los repositorios de Maven. Para poder manejarlo desde Maven es necesario darlo de alta en el repositorio local que utilicemos. Para ello, situándonos en la carpeta donde esté el jar, solo hay que ejecutar el siguiente comando:
@@ -12,7 +16,6 @@ Otra opción, sin usar Maven, es descargarnos el jar e incluirlo en el classpath
 
 El jar stanford-parser-3.9.1-models.jar puede obtenerse en el apartado Download de la página:  
 https://nlp.stanford.edu/software/lex-parser.shtml
-
 
 ## Base de datos
 Para el almacenamiento de las colocaciones extraidas se utiliza una base de datos MySQL 8.0.  
