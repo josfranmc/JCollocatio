@@ -82,9 +82,15 @@ public interface ICollocatioService {
 	/**
 	 * Elimina una colocación de una base de datos.
 	 * @param id identificador del registro a eliminar
-	 * @return el número de registro afectados
+	 * @return el número de registros afectados
 	 */
 	public long deleteCollocation(Long id);
+	
+	/**
+	 * Elimina una base de datos.
+	 * @param dbname identificador del registro a eliminar
+	 */
+	public void deleteDataBase(String dbname);
 	
 	/**
 	 * @return un nuevo objeto de tipo Collocatio

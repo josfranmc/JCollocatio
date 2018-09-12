@@ -62,6 +62,12 @@ public interface ICollocatioDao extends IGenericDao<Collocatio,Long> {
 	public List<Collocatio> findBestCollocationsByMutualInformation(int size);
 	
 	/**
+	 * Elimina una base de datos.
+	 * @param dbname identificador del registro a eliminar
+	 */
+	public void deleteDataBase(String dbname);	
+	
+	/**
 	 * @return un nuevo objeto de tipo Collocatio
 	 */
 	public Collocatio createElement();

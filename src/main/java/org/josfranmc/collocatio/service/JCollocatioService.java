@@ -133,6 +133,15 @@ public class JCollocatioService implements ICollocatioService {
 		return colDao.deleteElement(id);
 	}
 	
+	/**
+	 * Elimina una base de datos.
+	 * @param dbname identificador del registro a eliminar
+	 */
+	@Override
+	public void deleteDataBase(String dbname) {
+		colDao.deleteDataBase(dbname);
+	}
+	
 	@Override
 	public Collocatio createElement() {
 		return new Collocatio();

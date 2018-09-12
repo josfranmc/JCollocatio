@@ -57,6 +57,38 @@ public class CollocatioDao implements ICollocatioDao {
 		return new Collocatio();
 	}
 
+	
+	/**
+	 * Elimina una base de datos.
+	 * @param dbname identificador del registro a eliminar
+	 */
+	@Override
+	public void deleteDataBase(String dbname) {
+		Connection connection = null;
+		PreparedStatement pstatement = null;
+		try {
+			connection = getConnection();
+			String sqlInsert = "DROP DATABASE IF EXISTS ".concat(dbname);
+			pstatement = connection.prepareStatement(sqlInsert);
+			pstatement.executeUpdate();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (pstatement != null) {
+					pstatement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (SQLException e) {
+				e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	/**
 	 * Guarda una coloación en la base de datos.
 	 * @param entity objeto colocación a guardar
