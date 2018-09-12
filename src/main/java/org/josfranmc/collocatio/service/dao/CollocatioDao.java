@@ -141,9 +141,11 @@ public class CollocatioDao implements ICollocatioDao {
 	/**
 	 * Elimina una colocación de la base de datos.
 	 * @param id identificador del registro a eliminar
+	 * @return número de registros afectados
 	 */
 	@Override
-	public void deleteElement(Long id) {
+	public long deleteElement(Long id) {
+		long result = 0;
 		Connection connection = null;
 		PreparedStatement pstatement = null;		
 		try {
@@ -151,7 +153,7 @@ public class CollocatioDao implements ICollocatioDao {
 			pstatement = null;
 			pstatement = connection.prepareStatement("DELETE FROM col_collocatio WHERE ID = ?");
 			pstatement.setLong(1, id);
-			pstatement.executeUpdate();
+			result = pstatement.executeUpdate();
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -168,6 +170,7 @@ public class CollocatioDao implements ICollocatioDao {
 				}
 			}
 		}
+		return result;
 	}
 
 	/**

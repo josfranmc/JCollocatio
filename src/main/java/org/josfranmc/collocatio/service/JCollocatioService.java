@@ -126,10 +126,11 @@ public class JCollocatioService implements ICollocatioService {
 	/**
 	 * Elimina una colocación de una base de datos.
 	 * @param id identificador del registro a eliminar
+	 * @return número de registros afectados
 	 */
 	@Override
-	public void deleteCollocation(Long id) {
-		colDao.deleteElement(id);
+	public long deleteCollocation(Long id) {
+		return colDao.deleteElement(id);
 	}
 	
 	@Override

@@ -17,7 +17,7 @@ public interface IGenericDao<T,ID extends Serializable> {
 	
 	T getElementById(ID id);
 	
-	void deleteElement(ID id);
+	long deleteElement(ID id);
 	
 	List<T> getAllElements();
 }
