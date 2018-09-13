@@ -6,10 +6,10 @@ Por ahora solo dispone de la implementación de un algoritmo basado en el cálcu
 + database: script para creación de base de datos en MySQL
 + jar-flat: fichero jar con las clases de la aplicación junto a las dependencias necesarias, que se ubican en la carpeta lib
 + src: código fuente
-+ stanford-models:
++ stanford-models: fichero pom.xml para importar el jar stanford-parser-{version}-models en un repositorio local maven
 
 ## Stanford Parser
-El programa hace uso del analizador de Stanford (The Stanford Parser) para la extracción de tripletas. El paquete principal se incluyen en el proyecto como una dependencia más que Maven gestiona. Sin embargo, el jar con los models de los idiomas sopartados no se encuentra en los repositorios de Maven. Po tanto, al importar el proyecto puede que obtengamos un error al no poderse resolver la dependencia. Para poder manejarlo desde Maven es necesario darlo de alta en el repositorio local que utilicemos. Para ello, situándonos en la carpeta donde esté el jar, solo hay que ejecutar el siguiente comando:
+El programa hace uso del analizador de Stanford (The Stanford Parser) para la extracción de tripletas. El paquete principal se incluyen en el proyecto como una dependencia más que Maven gestiona. Sin embargo, el jar con los models de los idiomas sopartados no se encuentra en los repositorios de Maven. Por tanto, al importar el proyecto puede que obtengamos un error al no poderse resolver la dependencia. Para poder manejarlo desde Maven es necesario darlo de alta en el repositorio local que utilicemos. Para ello, situándonos en la carpeta donde esté el jar, solo hay que ejecutar el siguiente comando:
 
 mvn install:install-file –Dfile=stanford-parser-3.9.1-models.jar -DgroupId=edu.stanford.nlp -DartifactId=stanford-parser-3.9.1-models -Dversion=3.9.1 -Dpackaging=jar
 
