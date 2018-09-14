@@ -164,8 +164,8 @@ public class DataBaseBuilder {
 			s.addBatch("CREATE TABLE IF NOT EXISTS `" + getDataBaseName() + "`.`col_collocatio` ("
 					+  "`ID` INT NOT NULL AUTO_INCREMENT COMMENT 'Identificador de la colocación',"
 					+  "`DEPENDENCIA` VARCHAR(30) NOT NULL COMMENT 'Tipo de dependencia',"
-					+  "`PALABRA1` VARCHAR(50) NOT NULL COMMENT 'Palabra 1 de la tripleta',"
-					+  "`PALABRA2` VARCHAR(50) NOT NULL COMMENT 'Palabra 1 de la tripleta',"
+					+  "`PALABRA1` VARCHAR(500) NOT NULL COMMENT 'Palabra 1 de la tripleta',"
+					+  "`PALABRA2` VARCHAR(500) NOT NULL COMMENT 'Palabra 1 de la tripleta',"
 					+  "`INFOMUTUA` DOUBLE NULL COMMENT 'Valor información mutua',"
 					+  "PRIMARY KEY (`ID`))"
 					+  "COMMENT = 'Colocaciones';");
@@ -197,13 +197,14 @@ public class DataBaseBuilder {
 
 	/**
 	 * Comprueba si se ha establecido un nombre para la nueva base de datos a crear y que no excede el tamaño máximo permitido.
+	 * El tamaño máximo permitido es de 14 caracteres. Como se añade el prefifo col_ el tamaño máximo total es de 18 caracteres.
 	 * Si no es así se levanta IllegalArgumentException.
 	 */
 	private void checkName() throws IllegalArgumentException, StringIndexOutOfBoundsException {
 		if (getDataBaseName() == null) {
 			throw new IllegalArgumentException("No se ha especificado un nombre para la nueva base de datos.");
 		}
-		if (getDataBaseName().length() > 14) {
+		if (getDataBaseName().length() > 18) {
 			throw new StringIndexOutOfBoundsException("Nombre para la nueva base de datos mayor de 14 caracteres.");
 		}
 	}
