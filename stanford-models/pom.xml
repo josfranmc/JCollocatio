@@ -18,7 +18,7 @@
 			  <artifactId>stanford-parser-3.9.1-models</artifactId>
 			  <version>3.9.1</version>
 			  <packaging>jar</packaging>
-			  <file>stanford-parser-3.9.1-models-3.9.1.jar</file>
+			  <file>stanford-parser-3.9.1-models.jar</file>
 			  <generatePom>false</generatePom>
 		   </configuration>
 		   <executions>
