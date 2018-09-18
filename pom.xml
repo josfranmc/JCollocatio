@@ -40,8 +40,9 @@
 
     <dependency>
        <groupId>edu.stanford.nlp</groupId>
-       <artifactId>stanford-parser-3.9.1-models</artifactId>
-       <version>3.9.1</version> 
+       <artifactId>stanford-parser</artifactId>
+       <version>3.9.1</version>
+       <classifier>models</classifier>
     </dependency>
 
 	<dependency>
