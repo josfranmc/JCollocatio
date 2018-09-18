@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -124,10 +125,13 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 			log.info("Guardar en base de datos: " + this.isSaveInDB());
 			if (prepareDataBase()) {
 				int totalThreads = 0;
-				ExecutorService executorService = null;
+				final long totalTriples = triplesCollection.getTotalTriples();
+				ExecutorService executorServiceFreq = null;
+				ExecutorService executorServiceCal = null;
 				try {
-					executorService = getExecutorService();
-					final ExecutorCompletionService<TriplesData> completionService = new ExecutorCompletionService<>(executorService);
+
+					executorServiceFreq = Executors.newFixedThreadPool(getTotalThreads(), getThreadFactory("FregThread"));
+					final ExecutorCompletionService<TriplesData> completionService = new ExecutorCompletionService<>(executorServiceFreq);
 					log.info("Calculando datos de frecuencia...");
 					for (String dependency : triplesCollection.getDependenciesCollection()) {
 						if (isSelectedDependency(dependency)) {
@@ -136,9 +140,11 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 							totalThreads++;
 						}
 					}
-		
+					executorServiceFreq.shutdown();
+					triplesCollection = null;
+					
 					log.info("Calculando valor de información mutua para tripletas...");
-					final long totalTriples = triplesCollection.getTotalTriples();
+					executorServiceCal = Executors.newFixedThreadPool(getTotalThreads(), getThreadFactory("CalThread"));
 					for(int i = 0; i < totalThreads; i++) {
 					    final Future<TriplesData> resultTask = completionService.take();
 					    TriplesData data = null;
@@ -146,19 +152,26 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 					    	data = resultTask.get();
 					    	data.setTotalTriples(totalTriples);
 					    	data.setAdjustedFrequency(getAdjustedFrequency());
+					    	
+					    	log.info("Dependencia " + data.getDependency() + ": colocaciones " + data.getTotalElementsMap() + ", elementos a procesar " + data.getTotalTriplesByDependency());
+					    	
 					        CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(data, getConnection(false));
-					        executorService.submit(cmit);
+					        executorServiceCal.execute(cmit);
+					    } catch (RejectedExecutionException e) {     
+					    	log.error("Tarea no aceptada para procesar datos de dependencia " + data.getDependency());
 					    } catch (ExecutionException e) {
-					        log.warn("Incidencia ", e.getCause());
-					        log.warn("dependencia: " + data.getDependency());
+					        log.error("Incidencia " + e.getCause() + " al procesar datos dependencia " + data.getDependency());
+					    } catch (InterruptedException ie) { 
+					        log.error("Fin anómalo de hilo "  + " al procesar datos dependencia " + data.getDependency());
+					        ie.printStackTrace();
 					    }
 					}
 
-				    executorService.shutdown();
-				    while (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {}
-		
+				    awaitTerminationAfterShutdown(executorServiceFreq, executorServiceCal);
+
 				} catch (Exception e) {
-					executorService.shutdown();
+					executorServiceFreq.shutdownNow();
+					executorServiceCal.shutdownNow();
 					log.error(e);
 					e.printStackTrace();			
 				}
@@ -167,18 +180,42 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 			log.info("No hay datos que calcular");
 		}
 	}	
-	
+
 	/**
-	 * Obtiene un ExecutorService para el control y procesamiento de los hilos a lanzar y se personalizan algunas características de estos.
-	 * @return ExecutorService
+	 * @return un ExecutorService
 	 */
-	private ExecutorService getExecutorService() {
+	private ThreadFactory getThreadFactory(String name) {
 		ThreadFactory threadFactoryBuilder = new ThreadFactoryBuilder()
-				.setNameThread("MutualInfoThread")
+				.setNameThread(name)
                 .setDaemon(false)
                 .setPriority(Thread.MAX_PRIORITY)
                 .build();
-		return Executors.newFixedThreadPool(getTotalThreads(), threadFactoryBuilder);
+		return threadFactoryBuilder;
+	}
+	
+	/**
+	 * Termina de forma controlada la ejecución de los hilos lanzados mediante los ExecutorServices.<p>
+	 * <ul>
+	 * <li>El ExecutorService creado para los hilos de tipo ExtractTriplesDataThread se para completamente, ya que han debido terminar todos
+	 * sus hilos de procesarse.</li>
+	 * <li>El creado para los hilos de tipo CalculateMutualInformationThread inicia la parada de los hilos lanzados y queda a la espera de que
+	 * terminen de ejecutarse.</li>
+	 * </ul>
+	 * @param threadPoolFreg ExecutorService que controla hilos de tipo ExtractTriplesDataThread
+	 * @param threadPoolCal ExecutorService que controla hilos de tipo CalculateMutualInformationThread
+	 */
+	private void awaitTerminationAfterShutdown(ExecutorService threadPoolFreg, ExecutorService threadPoolCal) {
+		threadPoolFreg.shutdownNow();
+		threadPoolCal.shutdown();
+	    try {
+	        if (!threadPoolCal.awaitTermination(Integer.MAX_VALUE, TimeUnit.MINUTES)) {
+	        	threadPoolCal.shutdownNow();
+	        }
+	    } catch (InterruptedException ex) {
+	    	threadPoolCal.shutdownNow();
+	        log.error("Error esperando finalización de hilos. Interrumpiendo " + Thread.currentThread().toString());
+	        Thread.currentThread().interrupt();
+	    }
 	}
 	
 	/**
@@ -210,16 +247,26 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 */
 	private boolean prepareDataBase() {
 		boolean result = false;
+		Connection connection = null;
 		if (isSaveInDB()) {
 			String dbName = this.getDataBaseName();
 			if (dbName == null || dbName.equals(ConnectionFactory.DEFAULT_DB)) {
-				Connection connection = ConnectionFactory.getInstance().getConnection();
+				connection = ConnectionFactory.getInstance().getConnection();
 				if (connection != null) {
 					deletePreviousContent(connection);
 					result = true;
 				} else {
-					log.error("No se ha podido conectar a la base de datos.");
+					log.error("No se ha podido conectar a la base de datos por defecto.");
 				}
+			} else if (!dbName.equals(ConnectionFactory.DEFAULT_DB)) {
+				connection = ConnectionFactory.getInstance(dbName).getConnection();
+				if (connection != null) {
+					result = true;
+				} else {
+					log.error("No se ha podido conectar a la base de datos " + dbName);
+				}
+			} else {
+				throw new IllegalArgumentException("Error tratando nombre de base de datos");
 			}
 		}
 		return result;
@@ -232,6 +279,7 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	private void deletePreviousContent(Connection connection) {
 		PreparedStatement pstatement = null;
 		try {
+			log.info("Borrando contenido previo...");
 			pstatement = connection.prepareStatement("DELETE FROM col_aparece");
 			pstatement.executeUpdate();
 			pstatement.close();

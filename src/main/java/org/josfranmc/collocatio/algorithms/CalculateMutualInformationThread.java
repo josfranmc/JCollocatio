@@ -27,8 +27,10 @@ import com.mysql.cj.jdbc.exceptions.MysqlDataTruncation;
  * @see TriplesData
  */
 public class CalculateMutualInformationThread implements Runnable{
-long saves = 0;long llames = 0;long post = 0;
+long saves = 0;
 	private static final Logger log = Logger.getLogger(CalculateMutualInformationThread.class);
+	
+	private static final long INSERTS_LIMIT = 10000;
 
 	/**
 	 * Datos sobre los que realizar los cálculos para obtener el valor de información mutua
@@ -44,8 +46,20 @@ long saves = 0;long llames = 0;long post = 0;
 	 * Si se debe guardar en base de datos o no
 	 */
 	private boolean saveDB;
-	
 
+	/**
+	 * 
+	 */
+	private long insertsTotal;
+	
+	/**
+	 * 
+	 */
+	private long insertsCount;
+
+	
+	
+	
 	/**
 	 * Constructor principal. 
 	 * @param data encapsula todos los datos necesarios para realizar los cálculos 
@@ -55,6 +69,8 @@ long saves = 0;long llames = 0;long post = 0;
 	CalculateMutualInformationThread(TriplesData data, Connection connection) {
 		this.data = data;
 		this.connection = connection;
+		this.insertsCount = 0;
+		this.insertsTotal = 0;
 		this.saveDB = (connection == null) ? false : true;
 	}
 
@@ -91,72 +107,96 @@ long saves = 0;long llames = 0;long post = 0;
 	 */
 	@Override
 	public void run() {
+		Triple triple = null;
 		long totalTriples = data.getTotalTriples();                         // total de tripletas obtenidas (todas)
 		long totalTriplesByDependency = data.getTotalTriplesByDependency(); // total de tripletas de un determinado tipo de dependencia
 		long totalTriple = 0;                                               // total de ocurrencias de una tripleta concreta
 		long totalTriplesByDependencyAndWord1 = 0;                          // total de ocurrencias de la palabra 1 de un tripleta de un tipo de dependencia concreto
 		long totalTriplesByDependencyAndWord2 = 0;                          // total de ocurrencias de la palabra 2 de un tripleta de un tipo de dependencia concreto
 		
-		PreparedStatement pstatement = getPreparedStatementToCollocations();
-		log.info("Inicio hilo para guardar tripletas de dependencia " + data.getDependency());
-		for (Entry<Triple, TripleEvents> entry : data.getTriplesMap().entrySet()) {
-			
-			// tripleta sobre la que calcular su valor de inforamción mutua
-			Triple triple = entry.getKey();    
-			// ocurrencias de la tripleta
-			TripleEvents events = entry.getValue();
-			// total de ocurrencias de esta tripleta
-			totalTriple = events.getTotalEvents();  
-			
-			// número de ocurrencias de la palabra 1 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
-			String word1 = triple.getWord1();
-			totalTriplesByDependencyAndWord1 = data.getWord1FrecuencyMap().get(word1);
-			// número de ocurrencias de la palabra 2 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
-			String word2 = triple.getWord2();
-			totalTriplesByDependencyAndWord2 = data.getWord2FrecuencyMap().get(word2);
-			
-			log.debug("----- Dependencia " + triple.getDependency());
-			log.debug("Total Tripleta " + totalTriple);
-			log.debug("Total dependencia = " + totalTriplesByDependency);
-			log.debug("Total dependencia con palabra 1 " + triple.getWord1() + " = " + totalTriplesByDependencyAndWord1);
-			log.debug("Total dependencia con palabra 2 " + triple.getWord2() + " = " + totalTriplesByDependencyAndWord2);
-			
-			double P_A_B_C = (double) totalTriple / (double) totalTriples;	                                      log.debug("P_A_B_C = totalTriple / totalTriples = " + totalTriple + "/" + totalTriples + " = " + P_A_B_C);
-			P_A_B_C = P_A_B_C - data.getAdjustedFrequency();                                                      log.debug("P_A_B_C ajustada = " + P_A_B_C);
-			double P_B =  (double) totalTriplesByDependency / (double) totalTriples;	                          log.debug("P_B =  totalTriplesByDependency / totalTriples = " + totalTriplesByDependency + "/" + totalTriples + " = " + P_B);
-			double P_A_given_B = (double) totalTriplesByDependencyAndWord1 / (double) totalTriplesByDependency;	  log.debug("P_A_given_B = totalTriplesByDependencyAndWord1 / totalTriplesByDependency = " + totalTriplesByDependencyAndWord1 + "/" + totalTriplesByDependency + " = " + P_A_given_B);
-			double P_C_given_A = (double) totalTriplesByDependencyAndWord2 / (double) totalTriplesByDependency;	  log.debug("P_C_given_A = totalTriplesByDependencyAndWord2 / totalTriplesByDependency = " + totalTriplesByDependencyAndWord2 + "/" + totalTriplesByDependency + " = " + P_C_given_A);
+		double P_A_B_C = 0;                           
+		double P_B = 0;
+		double P_A_given_B = 0;
+		double P_C_given_A = 0;
+		double mutualInformation = 0;
 
-			double mutualInformation = getLogBase2(P_A_B_C / (P_B * P_A_given_B * P_C_given_A));
-			mutualInformation = new BigDecimal(mutualInformation).setScale(1, RoundingMode.HALF_EVEN).doubleValue();   log.debug("Mutual Information = log(P_A_B_C / (P_B * P_A_given_B * P_C_given_A)) = " + mutualInformation);
-			
-			triple.setMutualInformation(mutualInformation);
-			
-			if (isSaveDB()) {
-				llames++;
-				long generatedId = saveCollocation(triple, pstatement);
-				if (generatedId > 0) {
-					saveBooks(events.getBooks(), generatedId);
-				}
-				post++;
+		PreparedStatement pstatement = getPreparedStatementToCollocations();
+
+		try {
+			log.info("Inicio hilo para dependencia " + data.getDependency());
+			for (Entry<Triple, TripleEvents> entry : data.getTriplesMap().entrySet()) {
+				P_A_B_C = P_B = P_A_given_B = P_C_given_A = mutualInformation = 0;
+				
+				// tripleta sobre la que calcular su valor de inforamción mutua
+				triple = entry.getKey();    
+				// ocurrencias de la tripleta
+				TripleEvents events = entry.getValue();
+				// total de ocurrencias de esta tripleta
+				totalTriple = events.getTotalEvents();  
+				
+				// número de ocurrencias de la palabra 1 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
+				String word1 = triple.getWord1();
+				totalTriplesByDependencyAndWord1 = data.getWord1FrecuencyMap().get(word1);
+				// número de ocurrencias de la palabra 2 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
+				String word2 = triple.getWord2();
+				totalTriplesByDependencyAndWord2 = data.getWord2FrecuencyMap().get(word2);
+
+				P_A_B_C = (double) totalTriple / (double) totalTriples;	                                      
+				P_A_B_C = P_A_B_C - data.getAdjustedFrequency();                                                     
+				P_B =  (double) totalTriplesByDependency / (double) totalTriples;	                          
+				P_A_given_B = (double) totalTriplesByDependencyAndWord1 / (double) totalTriplesByDependency;
+				P_C_given_A = (double) totalTriplesByDependencyAndWord2 / (double) totalTriplesByDependency;
+	
+				mutualInformation = getLogBase2(P_A_B_C / (P_B * P_A_given_B * P_C_given_A));
+				mutualInformation = new BigDecimal(mutualInformation).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
+				triple.setMutualInformation(mutualInformation);
+				
+				if (isSaveDB()) {
+					long generatedId = saveCollocation(triple, pstatement);
+					if (generatedId > 0) {
+						try {
+							saveBooks(events.getBooks(), generatedId);
+						} catch (Exception e) {
+							log.error("No se han podido guardar libros para tripleta " + triple.toString());
+							log.error(e);
+						}
+					}
+					incrementInsertsCount();
+					if (getInsertsCount() == INSERTS_LIMIT) {
+						doCommit();
+						resetInsertsCount();
+					}
+				}	
 			}
-			log.debug("------");	
+		} finally {
+			closePreparedStatement(pstatement);
+			closeConnection();
+			log.info("Fin hilo dependencia " + data.getDependency() + ", inserciones " + this.insertsTotal);
+			this.data = null;
 		}
-		closePreparedStatement(pstatement);
-		closeConnection();
-		log.info("Fin hilo dependencia " + data.getDependency() + " | llames = " + llames + "  saves = " + saves + "  post = " + post);
 	}
 
 	/**
+	 * Calcula el logaritmo en base de dos de un número.<p>
+	 * Si el número pasado es cero o negativo se devuelve el valor cero.
 	 * @param num número del que se quiere calcular su logaritmo en base dos
 	 * @return el logaritmo en base dos de un número
 	 */
-	private Double getLogBase2(Double num) {
-		return (Math.log10(num) / Math.log10(2));
+	private Double getLogBase2(double num) {
+		Double result = (double) 0;
+		try {
+			result = Math.log10(num) / Math.log10(2);
+		} catch (Exception e) {
+			log.error("Error logaritmo ");
+			result = (double) 0;
+		}
+		return result;
 	}
 	
 	/**
-	 * Guarda en la base de datos la información de una tripleta junto a su valor de información mutua.
+	 * Guarda en la base de datos la información de una tripleta junto a su valor de información mutua.<p>
+	 * Si se produce alguna excepción por bloqueos que impide realizar la inserción se hace commit de la realizado hasta ahora y se vuelve
+	 * a intentar realizar la inserción otra vez.
 	 * @param triple tripleta que guardar
 	 * @param pstatement sentencia sql a ejecutar
 	 * @return el ID con el que se ha guardado el registro en la base de datos
@@ -164,67 +204,36 @@ long saves = 0;long llames = 0;long post = 0;
 	 */
 	private long saveCollocation(Triple triple, PreparedStatement pstatement) {
 		long generatedId = 0;
-		try {
-			pstatement.setString(1, triple.getDependency());
-			pstatement.setString(2, triple.getWord1());
-			pstatement.setString(3, triple.getWord2());
-			pstatement.setDouble(4, triple.getMutualInformation());
-			int affectedRows = pstatement.executeUpdate();
-			if (affectedRows > 0) {
-		        ResultSet generatedKeys = pstatement.getGeneratedKeys();
-				if (generatedKeys.next()) {
-					generatedId = generatedKeys.getLong(1);
+		boolean doIt = false;
+		while(!doIt) {
+			try {
+				pstatement.setString(1, triple.getDependency());
+				pstatement.setString(2, triple.getWord1());
+				pstatement.setString(3, triple.getWord2());
+				pstatement.setDouble(4, triple.getMutualInformation());
+				int affectedRows = pstatement.executeUpdate();
+				if (affectedRows > 0) {
+			        ResultSet generatedKeys = pstatement.getGeneratedKeys();
+					if (generatedKeys.next()) {
+						generatedId = generatedKeys.getLong(1);
+					}
+					saves++;
+				} else {
+					log.error("No se pudo guardar " + triple.getDependency() + ":" + triple.getWord1() + ":" + triple.getWord2());
 				}
-				saves++;
-			} else {
-				log.error("No se pudo guardar " + triple.getDependency() + ":" + triple.getWord1() + ":" + triple.getWord2());
-			}
-		} catch (MySQLTransactionRollbackException e) {
-			log.error(e);
-			tryAgain(triple, pstatement);			
-		} catch (MysqlDataTruncation e) {
-			log.error(e);
-			log.error("Length p1 = " + triple.getWord1().length() + ", Length p2 = " + triple.getWord2().length());
-		} catch (Exception e) {
-			log.error(e);
-		} 
-		return generatedId;
-	}
-	
-	/**
-	 * Intenta guardr de nuevo los datos en caso de no haber podido por algún bloqueo.<br>
-	 * Se hace un espera de 100 milisegundos antes de volver a intentarlo.
-	 * @param triple tripleta que guardar
-	 * @param pstatement sentencia sql a ejecutar
-	 * @return el ID con el que se ha guardado el registro en la base de datos
-	 */
-	private long tryAgain(Triple triple, PreparedStatement pstatement) {
-		try {
-			Thread.sleep(100);
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
+				doIt = true;
+				this.insertsTotal++;
+			} catch (MySQLTransactionRollbackException e) {
+				log.warn(e);
+				doCommit();		
+			} catch (MysqlDataTruncation e) {
+				log.error(e);
+				log.error("Length p1 = " + triple.getWord1().length() + ", Length p2 = " + triple.getWord2().length());
+			} catch (Exception e) {
+				log.error("saveCollocation " + triple.toString() + " mi " + triple.getMutualInformation());
+				log.error(e);
+			} 
 		}
-		log.info("Intentándolo otra vez");
-		long generatedId = 0;
-		try {
-			pstatement.setString(1, triple.getDependency());
-			pstatement.setString(2, triple.getWord1());
-			pstatement.setString(3, triple.getWord2());
-			pstatement.setDouble(4, triple.getMutualInformation());
-			int affectedRows = pstatement.executeUpdate();
-			if (affectedRows > 0) {
-		        ResultSet generatedKeys = pstatement.getGeneratedKeys();
-				if (generatedKeys.next()) {
-					generatedId = generatedKeys.getLong(1);
-				}
-			} else {
-				log.error("No se pudo guardar " + triple.getDependency() + ":" + triple.getWord1() + ":" + triple.getWord2());
-			}
-			saves++;
-		} catch (Exception e) {
-			log.error("No se ha podido guardar por segunda vez");
-			log.error(e);
-		} 
 		return generatedId;
 	}
 
@@ -232,8 +241,9 @@ long saves = 0;long llames = 0;long post = 0;
 	 * Guarda en la base de datos los libros en los que se ha encontrado una tripleta, la cual ya ha sido insertada en la base de datos
 	 * @param books conjunto de libros a guardar
 	 * @param idCol identificador asignado en la base de datos de la tripleta que se acaba de guardar, la cual ha sido encontrada en los libros a insertar.
+	 * @throws Exception 
 	 */
-	private void saveBooks(Set<String> books, long idCol) {
+	private void saveBooks(Set<String> books, long idCol) throws Exception {
 		PreparedStatement pstatement = null;
 		StringBuilder insertSql = new StringBuilder("insert into col_aparece(IDCOL, IDLIB) VALUES ");
 		
@@ -256,13 +266,9 @@ long saves = 0;long llames = 0;long post = 0;
 				pstatement.setString(i+1, booksArray[i]);
 			}
 			pstatement.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
 		} finally {
-			try {
+			if (pstatement != null) {
 				pstatement.close();
-			} catch (SQLException e) {
-				e.printStackTrace();
 			}
 		}
 	}	
@@ -279,17 +285,56 @@ long saves = 0;long llames = 0;long post = 0;
 	 */
 	private void closeConnection() {
 		if (connection != null) {
+			doCommit();
+			try {
+				connection.close();
+			} catch (SQLException e) {
+				log.error(e);
+				e.printStackTrace();
+			}
+		} else {
+			log.error("La conexión es null, no se puede cerrar y validar los cambios.");
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	private void doCommit() {
+		if (connection != null) {
 	    	try {
 				if (!connection.getAutoCommit()) {
 					connection.commit();
-					connection.close();
 				}
 			} catch (Exception e) {
 				log.error(e);
 				e.printStackTrace();
 			}
+		} else {
+			log.error("La conexión es null, no se pueden validar los cambios.");
 		}
 	}
+	
+	/**
+	 * 
+	 */
+	private long getInsertsCount() {
+		return this.insertsCount;
+	}	
+	
+	/**
+	 * 
+	 */
+	private void incrementInsertsCount() {
+		this.insertsCount++;
+	}	
+	
+	/**
+	 * 
+	 */
+	private void resetInsertsCount() {
+		this.insertsCount = 0;
+	}	
 	
 	/**
 	 * @return <i>true</i> si se deben guardar los resultados obtenidos en base de datos, <i>false</i> en caso contrario
@@ -297,4 +342,7 @@ long saves = 0;long llames = 0;long post = 0;
 	public boolean isSaveDB() {
 		return saveDB;
 	}
+
+	
+
 }

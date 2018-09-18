@@ -243,9 +243,7 @@ public class StanfordTriplesExtractor {
 			    }
 			    log.info("Leidos " + totalBooks + " archivos, " + this.totalSentences + " oraciones");
 			    log.info("Analizando textos...");
-			    executorService.shutdown();
-	
-			    while (!executorService.awaitTermination(getFilesToProcess().size(), TimeUnit.MINUTES)) {}
+			    awaitTerminationAfterShutdown(executorService);
 			} catch (Exception e) {
 				log.error(e);
 				e.printStackTrace();			
@@ -256,6 +254,23 @@ public class StanfordTriplesExtractor {
 	    return this.triplesCollection;
 	}
 
+	/**
+	 * Inicia la para de los hilos lanzados, quedando a la espera de la finalización de los mismos.
+	 * @param threadPool ExecutorService que gestiona los hilos a finalizar
+	 */
+	private void awaitTerminationAfterShutdown(ExecutorService threadPool) {
+		threadPool.shutdown();
+	    try {
+	        if (!threadPool.awaitTermination(Integer.MAX_VALUE, TimeUnit.MINUTES)) {
+	        	threadPool.shutdownNow();
+	        }
+	    } catch (InterruptedException ex) {
+	    	threadPool.shutdownNow();
+	        log.error("Error esperando finalización de hilos. Interrumpiendo " + Thread.currentThread().toString());
+	        Thread.currentThread().interrupt();
+	    }
+	}
+	
 	/**
 	 * Añade un parámetro de configuración del parser y el valor que toma dicho valor
 	 * @param key nombre del parámetro
