@@ -181,4 +181,11 @@ public class TriplesData {
 	public void setAdjustedFrequency(double frequencyAdjusted) {
 		this.adjustedFrequency = frequencyAdjusted;
 	}
+	
+	/**
+	 * @return el total de elementos de la colección de tripletas del tipo de dependencia indicado por la propiedad dependency de la clase. 
+	 */
+	public long getTotalElementsMap() {
+		return this.triplesMap.size();
+	}
 }
