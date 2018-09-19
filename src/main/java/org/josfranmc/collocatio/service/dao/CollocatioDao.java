@@ -265,7 +265,7 @@ public class CollocatioDao implements ICollocatioDao {
 		long idcol = -1;
 		try {
 			connection = getConnection();
-			pstatement = connection.prepareStatement("SELECT * FROM col_collocatio c, col_aparece a WHERE c.id=a.idcol ORDER BY id LIMIT " + offset + "," + size);
+			pstatement = connection.prepareStatement("SELECT * FROM col_collocatio c, col_aparece a WHERE c.id=a.idcol ORDER BY id LIMIT " + ((offset+size)-1) + "," + size);
 			ResultSet rs = pstatement.executeQuery();
 			while (rs.next()) {
 				if (idcol != rs.getLong("ID")) {
