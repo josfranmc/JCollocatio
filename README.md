@@ -5,25 +5,25 @@ Por ahora solo dispone de la implementación de un algoritmo basado en el cálcu
 ## Contenido
 + database: script para creación de base de datos en MySQL
 + jar-flat: fichero jar con las clases de la aplicación junto a las dependencias necesarias, que se ubican en la carpeta lib
++ javadoc: documentación del código
 + src: código fuente
-+ stanford-models: fichero pom.xml para importar el jar stanford-parser-{version}-models en un repositorio local maven
-
-## Stanford Parser
-El programa hace uso del analizador de Stanford (The Stanford Parser) para la extracción de tripletas. El paquete principal se incluyen en el proyecto como una dependencia más que Maven gestiona. Sin embargo, el jar con los models de los idiomas sopartados no se encuentra en los repositorios de Maven. Por tanto, al importar el proyecto puede que obtengamos un error al no poderse resolver la dependencia. Para poder manejarlo desde Maven es necesario darlo de alta en el repositorio local que utilicemos. Para ello, situándonos en la carpeta donde esté el jar, solo hay que ejecutar el siguiente comando:
-
-mvn install:install-file –Dfile=stanford-parser-3.9.1-models.jar -DgroupId=edu.stanford.nlp -DartifactId=stanford-parser-3.9.1-models -Dversion=3.9.1 -Dpackaging=jar
-
-En ocasiones, el plugin install de maven exige un proyecto pom para poder ejecutarse. En ese caso, se puede utilizar el fichero pom.xml existente en la carpeta stanford-models. Copiamos el pom y el jar en la misma carpeta y ejecutamos el comando: mvn install:install-file.
-
-Otra opción, sin usar Maven, es descargarnos el jar e incluirlo en el classpath del proyecto.
-
-El jar stanford-parser-3.9.1-models.jar puede obtenerse en el apartado Download de la página:  
-https://nlp.stanford.edu/software/lex-parser.shtml
 
 ## Base de datos
 Para el almacenamiento de las colocaciones extraidas se utiliza una base de datos MySQL 8.0.  
 En la carpeta database se encuentra un script que permite configurar el entorno de base de datos. Debemos conectarnos como root a nuestra base de datos y ejecutar el script.  
-En caso de que la base de datos se ubique en un equipo distinto al que ejecuta el programa y no pueda ser referenciado como localhost, se debe modificar el fichero de propiedades DBPool.properties ubicado en src/main/resources/db para indicar la dirección del host. 
+En caso de que la base de datos se ubique en un equipo distinto al que ejecuta el programa y no pueda ser referenciado como localhost, se debe modificar el fichero de propiedades DBPool.properties ubicado en src/main/resources/db para indicar la dirección del host.
 
 ## Uso
-En la carpeta jar-flat se encuentra el jar de la aplicación junto a las dependencias necesarias, que se ubican en la carpeta lib. En esta carpeta lib hay que añadir el jar stanford-parser-3.9.1-models.jar
+Desde línea de comandos:
+
+java -jar JCollocatio-1.0.jar
+
+## Notas
+El primer paso a seguir es la creación de la base de datos. Es necesaria para la ejecución del programa y para poder generar los ficheros jar de la aplicación.
+
+Si se usa el jar flat hay que asegurarse que exista la carpeta lib dentro de la carpeta desde la que ejecutemos la aplicación. Dentro de esta carpeta lib debe existir el fichero stanford-parser-3.9.1-models.jar. Este fichero no se incluye por limitación de tamaño del repositorio. Este jar se puede obtener en el apartado Download de la página:  
+https://nlp.stanford.edu/software/lex-parser.shtml
+
+Si se empaqueta el proyecto con mvn package se puede obtener un fichero jar denominado JCollocatio-1.0-shaded.jar, el cual puede ejecutarse de forma autónoma.
+
+El fichero de log generado se guarda en la carpeta log.
