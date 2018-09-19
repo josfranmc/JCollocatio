@@ -217,7 +217,7 @@ public class ParamsAlgorithm {
 	/**
 	 * Establece la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta: <i>P(w1,rel,w2)</i><p>
 	 * Se utiliza en el algoritmo de cálculo de información mutua (AlgorithmType.MUTUAL_INFORMATION).
-	 * @param adjustFrecuency valor de la constante de ajuste
+	 * @param adjustedFrequency valor de la constante de ajuste
 	 */
 	public void setAdjustedFrequency(double adjustedFrequency) {
 		this.adjustedFrequency = adjustedFrequency;
@@ -234,8 +234,6 @@ public class ParamsAlgorithm {
 	 * Establece un nombre identificativo para la nueva base de datos a crear.<br>El tamaño máximo del identifiador es de 14 caracteres.<br>
 	 * Al nombre indicado se le añade el prefijo col_
 	 * @param newDataBase nombre de la nueva base de datos a crear
-	 * @throws IllegalArgumentException
-	 * @throws StringIndexOutOfBoundsException
 	 */
 	public void setNewDataBase(String newDataBase) {
 		this.newDataBase = (newDataBase == null || newDataBase.isEmpty()) ? null : "col_" + newDataBase;
@@ -251,7 +249,7 @@ public class ParamsAlgorithm {
 	/**
 	 * Establece una descripción para la nueva base de datos a crear.<p>Si no se establece ninguna se establecerá el texto:
 	 * "Proceso lanzado el <i>fecha_lanzamiento</i>"
-	 * @param processDescription descripción del proceso
+	 * @param newDataBaseDescription descripción de la nueva base de datos
 	 */
 	public void setNewDataBaseDescription(String newDataBaseDescription) {
 		this.newDataBaseDescription = newDataBaseDescription;

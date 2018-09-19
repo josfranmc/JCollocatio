@@ -35,7 +35,7 @@ import org.josfranmc.collocatio.util.ThreadFactoryBuilder;
  * @author Jose Francisco Mena Ceca
  * @version 1.0
  * @see AbstractMutualInformationAlgorithm
- * @see StanfordTriplesExtractorTest
+ * @see StanfordTriplesExtractor
  * @see TriplesCollection
  */
 public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorithm {
@@ -166,8 +166,10 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 					        ie.printStackTrace();
 					    }
 					}
-
-				    awaitTerminationAfterShutdown(executorServiceFreq, executorServiceCal);
+					
+					executorServiceFreq.shutdown();
+					executorServiceFreq = null;
+				    awaitTerminationAfterShutdown(executorServiceCal);
 
 				} catch (Exception e) {
 					executorServiceFreq.shutdownNow();
@@ -182,7 +184,7 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	}	
 
 	/**
-	 * @return un ExecutorService
+	 * @return un ThreadFactory para que personaliza los hilos a lanzar
 	 */
 	private ThreadFactory getThreadFactory(String name) {
 		ThreadFactory threadFactoryBuilder = new ThreadFactoryBuilder()
@@ -194,18 +196,12 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	}
 	
 	/**
-	 * Termina de forma controlada la ejecución de los hilos lanzados mediante los ExecutorServices.<p>
-	 * <ul>
-	 * <li>El ExecutorService creado para los hilos de tipo ExtractTriplesDataThread se para completamente, ya que han debido terminar todos
-	 * sus hilos de procesarse.</li>
-	 * <li>El creado para los hilos de tipo CalculateMutualInformationThread inicia la parada de los hilos lanzados y queda a la espera de que
-	 * terminen de ejecutarse.</li>
-	 * </ul>
-	 * @param threadPoolFreg ExecutorService que controla hilos de tipo ExtractTriplesDataThread
+	 * Termina de forma controlada la ejecución de los hilos lanzados mediante el ExecutorService que controla
+     * los hilos de tipo CalculateMutualInformationThread.<p>
+     * Inicia la parada de los hilos lanzados y queda a la espera de que terminen de ejecutarse.
 	 * @param threadPoolCal ExecutorService que controla hilos de tipo CalculateMutualInformationThread
 	 */
-	private void awaitTerminationAfterShutdown(ExecutorService threadPoolFreg, ExecutorService threadPoolCal) {
-		threadPoolFreg.shutdownNow();
+	private void awaitTerminationAfterShutdown(ExecutorService threadPoolCal) {
 		threadPoolCal.shutdown();
 	    try {
 	        if (!threadPoolCal.awaitTermination(Integer.MAX_VALUE, TimeUnit.MINUTES)) {
@@ -427,7 +423,7 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 
 	/**
 	 * Establece la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta: <i>P(w1,rel,w2)</i>
-	 * @param adjustFrecuency valor de la constante de ajuste
+	 * @param adjustedFrequency valor de la constante de ajuste
 	 */
 	public void setAdjustedFrequency(double adjustedFrequency) {
 		this.adjustedFrequency = adjustedFrequency;
@@ -442,7 +438,7 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 
 	/**
 	 * Establece el nombre de la base de datos a utilizar.
-	 * @param processName nombre de la base de datos
+	 * @param dataBaseName nombre de la base de datos
 	 */
 	public void setDataBaseName(String dataBaseName) {
 		this.dataBaseName = dataBaseName;

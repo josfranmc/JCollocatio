@@ -27,10 +27,10 @@ import com.mysql.cj.jdbc.exceptions.MysqlDataTruncation;
  * @see TriplesData
  */
 public class CalculateMutualInformationThread implements Runnable{
-long saves = 0;
+
 	private static final Logger log = Logger.getLogger(CalculateMutualInformationThread.class);
 	
-	private static final long INSERTS_LIMIT = 10000;
+	private static final long INSERTS_LIMIT = 5000;
 
 	/**
 	 * Datos sobre los que realizar los cálculos para obtener el valor de información mutua
@@ -48,18 +48,16 @@ long saves = 0;
 	private boolean saveDB;
 
 	/**
-	 * 
+	 * Contador para saber el número total de inserciones realizadas
 	 */
 	private long insertsTotal;
 	
 	/**
-	 * 
+	 * Contador parcial para saber el número de inserciones que se llevan y saber cuando hacer commit
 	 */
 	private long insertsCount;
 
-	
-	
-	
+
 	/**
 	 * Constructor principal. 
 	 * @param data encapsula todos los datos necesarios para realizar los cálculos 
@@ -217,7 +215,6 @@ long saves = 0;
 					if (generatedKeys.next()) {
 						generatedId = generatedKeys.getLong(1);
 					}
-					saves++;
 				} else {
 					log.error("No se pudo guardar " + triple.getDependency() + ":" + triple.getWord1() + ":" + triple.getWord2());
 				}
@@ -298,7 +295,7 @@ long saves = 0;
 	}
 	
 	/**
-	 * 
+	 * Realiza commit en la base de datos, validando así las inserciones realizadas hasta el momento
 	 */
 	private void doCommit() {
 		if (connection != null) {
@@ -316,21 +313,21 @@ long saves = 0;
 	}
 	
 	/**
-	 * 
+	 * @return el número de inserciones realizadas hasta el momento
 	 */
 	private long getInsertsCount() {
 		return this.insertsCount;
 	}	
 	
 	/**
-	 * 
+	 * Incrementa el contador parcial de inserciones realizadas
 	 */
 	private void incrementInsertsCount() {
 		this.insertsCount++;
 	}	
 	
 	/**
-	 * 
+	 * Resetea el contador parcial poniéndolo a cero
 	 */
 	private void resetInsertsCount() {
 		this.insertsCount = 0;
@@ -342,7 +339,4 @@ long saves = 0;
 	public boolean isSaveDB() {
 		return saveDB;
 	}
-
-	
-
 }

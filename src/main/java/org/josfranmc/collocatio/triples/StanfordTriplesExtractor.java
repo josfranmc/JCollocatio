@@ -76,7 +76,11 @@ public class StanfordTriplesExtractor {
 	 */
 	private TriplesCollection triplesCollection;
 	
+	/**
+	 * Contador para saber el número de oraciones leidas
+	 */
 	private long totalSentences = 0; 
+	
 	
 	/**
 	 * Constructor principal. Establece la siguiente configuración básica:
