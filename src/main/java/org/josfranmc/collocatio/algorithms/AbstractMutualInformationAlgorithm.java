@@ -29,8 +29,7 @@ public abstract class AbstractMutualInformationAlgorithm implements ICollocation
 	@Override
 	public void findCollocations() {
 		log.info("USANDO ALGORITMO BASADO EN INFORMACIÓN MUTUA " + getCurrentTime());
-		TriplesCollection triplesCollection = extractTriples();
-		calculateMutualInformation(triplesCollection);
+		calculateMutualInformation(extractTriples());
 		log.info("FIN ALGORITMO BASADO EN INFORMACIÓN MUTUA " + getCurrentTime());
 	}
 	

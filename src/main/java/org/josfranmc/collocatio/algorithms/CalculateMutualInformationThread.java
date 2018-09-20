@@ -170,6 +170,9 @@ public class CalculateMutualInformationThread implements Runnable{
 			closePreparedStatement(pstatement);
 			closeConnection();
 			log.info("Fin hilo dependencia " + data.getDependency() + ", inserciones " + this.insertsTotal);
+			this.data.getTriplesMap().clear();
+			this.data.getWord1FrecuencyMap().clear();
+			this.data.getWord2FrecuencyMap().clear();
 			this.data = null;
 		}
 	}
