@@ -141,7 +141,6 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 						}
 					}
 					executorServiceFreq.shutdown();
-					//triplesCollection.getTriplesCollection().clear();
 					triplesCollection = null;
 					
 					log.info("Calculando valor de información mutua para tripletas...");
