@@ -4,51 +4,51 @@
 
   <groupId>org.josfranmc.collocatio</groupId>
   <artifactId>JCollocatio</artifactId>
-  <version>1.0</version>
+  <version>2.0</version>
   <packaging>jar</packaging>
 
   <name>JCollocatio</name>
   <description>Permite ejecutar algoritmos para extraer colocaciones de un conjunto de textos</description>    
-  <url>http://maven.apache.org</url>
+  <url>https://github.com/josfranmc/JCollocatio</url>
+  <licenses>
+    <license>
+      <name>GNU General Public License Version 3</name>
+      <url>http://www.gnu.org/licenses/gpl-3.0.txt</url>
+    </license>
+  </licenses>
 
   <developers>
     <developer>
       <name>Jose Francisco Mena Ceca</name>
       <organization>org.josfranmc</organization>
+      <email>josfranmc@gmail.com</email>
     </developer>
   </developers>
 
   <properties>
-    <log4j.version>1.2.17</log4j.version>
-    <junit.version>4.12</junit.version>
-    <mysql.version>8.0.11</mysql.version>
     <jdk.target.version>1.8</jdk.target.version>
     <jdk.source.version>1.8</jdk.source.version>
-    <maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
-    <maven.jar.plugin.version>3.0.2</maven.jar.plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <main.class>org.josfranmc.collocatio.JCollocatio</main.class>
   </properties>
 
   <dependencies>
-
-	<!-- https://mvnrepository.com/artifact/edu.stanford.nlp/stanford-parser -->
     <dependency>
         <groupId>edu.stanford.nlp</groupId>
         <artifactId>stanford-parser</artifactId>
-        <version>3.9.1</version>
+        <version>3.9.2</version>
     </dependency>
-
     <dependency>
        <groupId>edu.stanford.nlp</groupId>
        <artifactId>stanford-parser</artifactId>
-       <version>3.9.1</version>
+       <version>3.9.2</version>
        <classifier>models</classifier>
     </dependency>
 
 	<dependency>
 	    <groupId>mysql</groupId>
 	    <artifactId>mysql-connector-java</artifactId>
-	    <version>${mysql.version}</version>
+	    <version>8.0.11</version>
     </dependency>
 
     <dependency>
@@ -58,7 +58,6 @@
         <scope>compile</scope>
     </dependency>
 
-  
     <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
@@ -68,25 +67,23 @@
     <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
-        <version>${log4j.version}</version>
+        <version>1.2.17</version>
     </dependency>
-    
     <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>${junit.version}</version>
+        <version>4.12</version>
         <scope>test</scope>
     </dependency>
   </dependencies>
-  
-  
+
   <build>
-      <finalName>JCollocatio-1.0</finalName>
+      <finalName>${project.artifactId}-${project.version}</finalName>
       <plugins>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-compiler-plugin</artifactId>
-              <version>${maven.compiler.plugin.version}</version>
+              <version>3.6.1</version>
               <configuration>
                   <source>${jdk.source.version}</source>
                   <target>${jdk.target.version}</target>
@@ -94,63 +91,64 @@
               </configuration>
           </plugin>
            
-			<plugin>
-			    <groupId>org.apache.maven.plugins</groupId>
-			    <artifactId>maven-jar-plugin</artifactId>
-			    <version>${maven.jar.plugin.version}</version>
-			    <configuration>
-			        <archive>
-			            <manifest>
-			                <addClasspath>true</addClasspath>
-			                <classpathPrefix>lib/</classpathPrefix>
-			                <mainClass>org.josfranmc.collocatio.client.JCollocatioClient</mainClass>
-			            </manifest>
-			        </archive>
-			    </configuration>
-			</plugin>   
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-jar-plugin</artifactId>
+              <version>3.2.0</version>
+              <configuration>
+                  <archive>
+                      <manifest>
+                          <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                          <addClasspath>true</addClasspath>
+                          <classpathPrefix>lib/</classpathPrefix>
+                          <mainClass>${main.class}</mainClass>
+                      </manifest>
+                      <manifestEntries>
+                          <url>${project.url}</url>
+                      </manifestEntries>
+                  </archive>     
+              </configuration>
+          </plugin>   
 			
-			<plugin>
-			    <groupId>org.apache.maven.plugins</groupId>
-			    <artifactId>maven-dependency-plugin</artifactId>
-			    <executions>
-			        <execution>
-			            <id>copy</id>
-			            <phase>install</phase>
-			            <goals>
-			                <goal>copy-dependencies</goal>
-			            </goals>
-			            <configuration>
-			                <outputDirectory>
-			                  ${project.build.directory}/lib
-			                </outputDirectory>
-			            </configuration>
-			        </execution>
-			    </executions>
-			</plugin>			   		
-      		
-      		<!-- Para crear un jar con todas las dependencias incluidas en él -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>2.4.3</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <shadedArtifactAttached>true</shadedArtifactAttached>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.josfranmc.collocatio.client.JCollocatioClient</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>      		 		
-            
+		  <plugin>
+		      <groupId>org.apache.maven.plugins</groupId>
+		      <artifactId>maven-dependency-plugin</artifactId>
+              <executions>
+                  <execution>
+		              <id>copy</id>
+		              <phase>install</phase>
+		              <goals>
+		                  <goal>copy-dependencies</goal>
+		              </goals>
+		              <configuration>
+		                  <outputDirectory>${project.build.directory}/lib</outputDirectory>
+		                  <excludeArtifactIds>junit,hamcrest-core,stanford-parser</excludeArtifactIds>
+		              </configuration>
+		          </execution>
+              </executions>
+		  </plugin>			   		
+
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-shade-plugin</artifactId>
+              <version>3.2.1</version>
+              <executions>
+                  <execution>
+                      <phase>package</phase>
+                      <goals>
+                          <goal>shade</goal>
+                      </goals>
+                      <configuration>
+                          <shadedArtifactAttached>true</shadedArtifactAttached>
+                          <transformers>
+                              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                  <mainClass>${main.class}</mainClass>
+                              </transformer>
+                          </transformers>
+                      </configuration>
+                  </execution>
+              </executions>
+          </plugin>
       </plugins>     
   </build>  
 </project>
