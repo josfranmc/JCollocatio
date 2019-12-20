@@ -8,14 +8,14 @@ import org.apache.log4j.Logger;
 import org.josfranmc.collocatio.triples.TriplesCollection;
 
 /**
- * Encapsula el algoritmo que describe la obtención de colocaciones mediante el cálculo del valor denominado "información mutua".
- * El algoritmo se desarrolla en dos pasos principales:
+ * Encapsulates the algorithm that describes how obtain collocations by calculating the mutual information value.
+ * The algorithm follows two main steps:
  * <ul>
- * <li>En el primero se obtiene una colección de tripletas, la cual se define mediante la clase TriplesCollection</li>
- * <li>En el segundo se utilizan éstas tripletas para calcular el valor de información mutua de cada una de ellas</li>
+ * <li>First, getting a collection of triples. This triples are defined through the <code>TriplesCollection</code> class.</li>
+ * <li>Second, the collection obtained is used to calculate the mutual information value of each one.</li>
  * </ul>
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  * @see ICollocationAlgorithm
  * @see TriplesCollection
  */
@@ -24,22 +24,22 @@ public abstract class AbstractMutualInformationAlgorithm implements ICollocation
 	private static final Logger log = Logger.getLogger(AbstractMutualInformationAlgorithm.class);
 	
 	/**
-	 * Ejecuta el algoritmo, estableciendo los pasos a seguir y el orden de ejecución de los mismos.
+	 * Runs an algorithm, establishing the steps to follow and the order of execution of the same.
 	 */
 	@Override
 	public void findCollocations() {
-		log.info("USANDO ALGORITMO BASADO EN INFORMACIÓN MUTUA " + getCurrentTime());
+		log.info("USING MUTUAL INFORMATION ALGORITHM " + getCurrentTime());
 		calculateMutualInformation(extractTriples());
-		log.info("FIN ALGORITMO BASADO EN INFORMACIÓN MUTUA " + getCurrentTime());
+		log.info("END MUTUAL INFORMATION ALGORITHM " + getCurrentTime());
 	}
 	
 	/**
-	 * Obtención de tripletas. Es el primer paso del algoritmo.
+	 * Obtains triples. It is the first step of the algorithm.
 	 */
 	protected abstract TriplesCollection extractTriples();
 	
 	/**
-	 * Cálculo del valor de información mutua de cada tripleta. Es el segundo paso del algoritmo.
+	 * Calculates mutual information value for each triple. It is the second step of the algorithm.
 	 */
 	protected abstract void calculateMutualInformation(TriplesCollection triplesCollection);
 	

@@ -1,62 +1,96 @@
 package org.josfranmc.collocatio.algorithms;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
-import org.josfranmc.collocatio.algorithms.OtherAlgorithm;
-import org.josfranmc.collocatio.db.DataBaseBuilder;
+import edu.stanford.nlp.io.IOUtils;
 
 /**
- * Crea y configura un algoritmo para la búsqueda de colocaciones. Los objetos creados de este tipo implementan la interfaz ICollocationAlgorithm
+ * Creates and sets up an object that allows you to execute an algorithm in order to search collocations.<br>
+ * This objects implements the <code>ICollocationAlgorithm</code> interface.
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  * @see ICollocationAlgorithm
  */
 public class CollocationAlgorithmBuilder {
+
+	/**
+	 * Setting parameters
+	 */
+	private Properties properties;
+	
 	
 	/**
-	 * Parámetros de configuración pasados por el cliente
-	 * @see paramsAlgorithm
+	 * Default constructor.
 	 */
-	private ParamsAlgorithm paramsAlgorithm;
-	
+	public CollocationAlgorithmBuilder() {
+		properties = new Properties();
+	}
 	
 	/**
-	 * Asigna los parámetros de configuración de un algoritmo, los cuales se encapsulan en un objeto de tipo ParamsAlgorithm
-	 * @param paramsAlgorithm parámetros de configuración
-	 * @return Referencia al objeto constructor (this)
-	 * @see paramsAlgorithm
+	 * Sets configuration properties for an algorithm.
+	 * @param properties a <code>Properties</code> object
+	 * @return a reference to the <code>CollocationAlgorithmBuilder</code> object that call this method
 	 */
-	public CollocationAlgorithmBuilder setAlgorithmConfig(ParamsAlgorithm paramsAlgorithm) {
-		this.paramsAlgorithm = paramsAlgorithm;
+	public CollocationAlgorithmBuilder setConfiguration(Properties properties) {
+		if (properties == null) {
+			throw new IllegalArgumentException("No properties for setting algorithm");
+		}
+		this.properties.putAll(properties);
 		return this;
 	}
 	
 	/**
-	 * Construye y configura un objeto algoritmo del tipo ICollocationAlgorithm. La configuración se realiza en base a los parámetros
-	 * que se han tenido que establecer previamente
-	 * fijados previamente.
-	 * @return Un objeto algoritmo del tipo ICollocationAlgorithm
+	 * Sets configuration for an algorithm from a properties file.
+	 * @param file file name
+	 * @return a reference to the <code>CollocationAlgorithmBuilder</code> object that call this method
+	 */
+	public CollocationAlgorithmBuilder setConfigurationFromFile(String file) {
+		try {
+			properties.load(IOUtils.readerFromString(file));
+		} catch (IOException e) {
+			throw new IllegalArgumentException("Error loading file " + file);
+		}
+		return this;
+	}
+	
+	/**
+	 * Returns the current configuration properties.
+	 * @return the current configuration properties.
+	 */
+	public Properties getConfiguration() {
+		return this.properties;
+	}
+	
+	/**
+	 * Builds and sets up an object that allows you to run an algorithm to get collocations.<br>
+	 * This kind of objects implements the <code>ICollocationAlgorithm</code> interface.
+	 * @return an <code>ICollocationAlgorithm</code> object	
 	 * @see ICollocationAlgorithm
 	 */
 	public ICollocationAlgorithm build() {
-		if (getParamsAlgorithm() == null) {
-			throw new IllegalArgumentException("No se han establecido parámetros de configuración");
+
+		if (!isAlgorithmType(properties.getProperty("type"))) {
+			throw new IllegalArgumentException("Algorithm type has not been established");
 		}
-		if (getAlgorithmType() == null) {
-			throw new IllegalArgumentException("Debe especificarse tipo de algoritmo a utilizar");
+		if (!isTextFilesProperty(properties.getProperty("textFiles"))) {
+			throw new IllegalArgumentException("Path to files to be process has not been established");
 		}
-		if (getTotalThreads() < 1) {
-			throw new IllegalArgumentException("Debe especificarse un número de hilos a utilizar mayor que cero");
-		}
+
+		checkTotalThreads();
 		
+		//properties.setProperty("saveInDb", Boolean.valueOf(properties.getProperty("saveInDb")));
+
 		ICollocationAlgorithm collocationAlgorithm = null;
-		
+
 		if (getAlgorithmType() == AlgorithmType.MUTUAL_INFORMATION) {
-			collocationAlgorithm = getMutualInformationAlgorithm();			
-		} else if (getAlgorithmType() == AlgorithmType.ANOTHER_ALGORITHM) {
-			collocationAlgorithm = new OtherAlgorithm();
+			collocationAlgorithm = getMutualInformationAlgorithm();
+		} else if (getAlgorithmType() == AlgorithmType.FRECUENCY) {
+			//TODO - crear objeto para algoritmo basado en frecuencias
 		}
 		return collocationAlgorithm;
 	}
@@ -68,123 +102,97 @@ public class CollocationAlgorithmBuilder {
 	 * @see AlgorithmType
 	 */
 	private MutualInformationAlgorithm getMutualInformationAlgorithm() {
-		if (getTextsPathToProcess() == null || getTextsPathToProcess().isEmpty()) {
-			throw new IllegalArgumentException("Debe especificarse la ruta de los ficheros a analizar");
-		}
-		
+	
 		MutualInformationAlgorithm mia = new MutualInformationAlgorithm();
-		
-		mia.setTextsPathToProcess(getTextsPathToProcess());
-		mia.setTotalThreads(getTotalThreads());
-		mia.setSaveInDB(getSaveInDB());
-		mia.setAdjustedFrequency(getAdjustedFrequency());
-		mia.setStanfordOptions(getStanfordOptions());
-		
-		//si no se indica nada se carga el parser para idioma inglés
-		if (getModel() == null) {
-			mia.setModel("edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz");
-		} else {
-			mia.setModel(getModel());
-		}
-		
-		//si no se indica filtro de tripletas la lista de filtrado estará vacía
-		if (getTriplesFilter() == null) {
-			mia.setTriplesFilter(new ArrayList<String>());
-		} else {
-			mia.setTriplesFilter(getTriplesFilter());
-		}
+		mia.setConfiguration(this.properties);
 
 		// si se ha indicado una nueva base de datos se usará esta
-		if (getNewDataBase() != null) {
-			DataBaseBuilder dbb = new DataBaseBuilder(getNewDataBase(), getNewDataBaseDescription());
-			dbb.createNewDB();	
-			mia.setDataBaseName(getNewDataBase());
-			// aunque se haya indicado no guardar en db se guardará
-			mia.setSaveInDB(true);
-		}
+//		if (getNewDataBase() != null) {
+//			DataBaseBuilder dbb = new DataBaseBuilder(getNewDataBase(), getNewDataBaseDescription());
+//			dbb.createNewDB();	
+//			mia.setDataBaseName(getNewDataBase());
+//			// aunque se haya indicado no guardar en db se guardará
+//			mia.setSaveInDB(true);
+//		}
 		return mia;
-	}
-	
-	/**
-	 * @return el conjunto de parámetros de configuración
-	 * @see ParamsAlgorithm
-	 */
-	private ParamsAlgorithm getParamsAlgorithm() {
-		return paramsAlgorithm;
 	}
 
 	/**
-	 * @return tipo de algoritmo a instanciar
-	 * @see AlgorithmType
+	 * Checks if the algorithm type property is right.
+	 * @param type the value of the property
+	 * @return <i>true</i> if the algorithm type property is right, <i>false</i> otherwise
 	 */
+	private boolean isAlgorithmType(String type) {
+		boolean value = true;
+		try {
+			AlgorithmType.valueOf(type);
+		} catch (Exception e) {
+			value = false;
+		}
+		return value;
+	}
+
 	private AlgorithmType getAlgorithmType() {
-		return this.paramsAlgorithm.getAlgorithmType();
+		return AlgorithmType.valueOf(properties.getProperty("type"));
+	}
+
+	/**
+	 * Checks if the <i>textFiles</i> property is right.
+	 * @param path the value of the property
+	 * @return <i>true</i> if the textFiles property is right, <i>false</i> otherwise
+	 */
+	private boolean isTextFilesProperty(String path) {
+		boolean value = false;
+		if (path != null && (new File(path).exists())) {
+			value = true;
+		}
+		return value;
 	}
 	
+	/**
+	 * Checks if the value of the totalThreads property is right.
+	 * By default, the number of available processors minus one is used.
+	 */
+	private void checkTotalThreads() {
+		boolean error = false;
+		int threads = 1;
+		
+		try {
+			threads = Integer.parseInt(properties.getProperty("totalThreads"));
+		} catch (Exception e) {
+			error = true;
+		}
+		
+		if (threads <= 0 || error) {
+			int availableProcessors = Runtime.getRuntime().availableProcessors();
+			if (availableProcessors > 1) {
+				threads = availableProcessors - 1;
+			}
+			this.properties.setProperty("totalThreads", String.valueOf(threads));
+		}
+	}
+
+	/**
+	 * 
+	 * @return <i>true</i> si se debe guardar el proceso es base de datos, <i>false</i> en caso contrario
+	 */
+	private boolean getSaveInDB() {
+		return Boolean.valueOf(properties.getProperty("saveInDb"));
+	}
+
 	/**
 	 * Se utiliza en el algoritmo de cálculo de información mutua (AlgorithmType.MUTUAL_INFORMATION)
 	 * @return tipo de tripleta a usar como filtro en el algoritmo de información mutua
 	 */
 	private List<String> getTriplesFilter() {
-		return this.paramsAlgorithm.getTriplesFilter();
-	}
-
-	/**
-	 * @return ruta a los ficheros a analizar para extraer tripletas
-	 */
-	private String getTextsPathToProcess() {
-		return this.paramsAlgorithm.getTextsPathToProcess();
-	}
-
-	/**
-	 * @return total de hilos a utilizar para parallelizar el proceso
-	 */
-	private int getTotalThreads() {
-		return this.paramsAlgorithm.getTotalThreads();
-	}
-
-	/**
-	 * Se utiliza en el algoritmo de cálculo de información mutua (AlgorithmType.MUTUAL_INFORMATION)
-	 * @return opciones de configurtación para el analizador de Stanford
-	 */
-	private HashMap<String, String> getStanfordOptions() {
-		return this.paramsAlgorithm.getStanfordOptions();
-	}
-	
-	/**
-	 * Se utiliza en el algoritmo de cálculo de información mutua (AlgorithmType.MUTUAL_INFORMATION)
-	 * @return la ruta del fichero que contiene el parser a cargar
-	 */
-	private String getModel() {
-		return this.paramsAlgorithm.getModel();
-	}
-	
-	/**
-	 * @return <i>true</i> si se debe guardar el proceso es base de datos, <i>false</i> en caso contrario
-	 */
-	private boolean getSaveInDB() {
-		return this.paramsAlgorithm.isSaveInDB();
-	}
-	
-	/**
-	 * Se utiliza en el algoritmo de cálculo de información mutua (AlgorithmType.MUTUAL_INFORMATION)
-	 * @return el valor de la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta
-	 */
-	private double getAdjustedFrequency() {
-		return this.paramsAlgorithm.getAdjustedFrequency();
-	}
-	
-	/**
-	 * @return el nombre identificativo de la nueva base de datos a crear
-	 */
-	private String getNewDataBase() {
-		return this.paramsAlgorithm.getNewDataBase();
-	}
-	
-	/**
-	 * @return la descripción de la base de datos a crear
-	 */
-	private String getNewDataBaseDescription() {
-		return this.paramsAlgorithm.getNewDataBaseDescription();
+		List<String> listFilter = null;
+		String triplesFilter = properties.getProperty("triplesFilter");
+		if (triplesFilter == null) {
+			listFilter = new ArrayList<>();
+		} else {
+			String[] dep = triplesFilter.split(",");
+			listFilter = Arrays.asList(dep);
+		}
+		return listFilter;
 	}
 }

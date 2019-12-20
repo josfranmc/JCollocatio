@@ -2,64 +2,37 @@ package org.josfranmc.collocatio.triples;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-import java.util.HashMap;
+import java.util.Properties;
 
 import org.junit.Test;
 
 /**
  * Clase que implementa los test para probar los métodos de la clase StanfordTriplesExtractor
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  */
 public class StanfordTriplesExtractorTest {
-
-	/**
-	 * Comprueba si los valores por defecto de los parámetros del analizador de Stanford son los correctos
-	 */
-	@Test
-	public void testSetStanfordOptions() {
-		StanfordTriplesExtractor ste = new StanfordTriplesExtractor();
-		try {
-			ste.setStanfordOptions(null);
-			fail("Argumento null para setStanfordOptions");
-		} catch (IllegalArgumentException e) {
-			
-		} catch (NullPointerException e) {
-			fail("Argumento null para setStanfordOptions");
-		}
-		
-		HashMap<String, String> stanfordOptions = new HashMap<String, String>();
-		stanfordOptions.put("-example1", "example");
-		stanfordOptions.put("-example2", null);
-		ste.setStanfordOptions(stanfordOptions);
-		
-		stanfordOptions = ste.getStanfordOptions();
-
-		assertTrue("No existe opción -retainTmpSubcategories", stanfordOptions.containsKey("-retainTmpSubcategories"));
-		assertTrue("No existe opción -maxLength", stanfordOptions.containsKey("-maxLength"));
-		assertNull("La opción -retainTmpSubcategories no es null", ste.getStanfordOption("-retainTmpSubcategories"));
-		assertEquals("La opción -maxLength no tiene el valor por defecto adecuado", StanfordTriplesExtractor.DEFAULT_SENTENCE_MAX_LENGTH, Integer.parseInt(ste.getStanfordOption("-maxLength")));
-	}
-	
 
 	/**
 	 * Comprueba que al crear el objeto StanfordTriplesExtractor se inicializa la referencia a un objeto TriplesCollection
 	 */
 	@Test
-	public void testCreateTriplesCollectionOnConstructor() {
+	public void createTriplesCollectionOnConstructorTest() {
 		StanfordTriplesExtractor ste = new StanfordTriplesExtractor();
-		assertNotNull("TriplesCollection es null", ste.getTriplesCollection());
+		assertNotNull("TriplesCollection is null [1]", ste.getTriplesCollection());
+		
+		Properties p = new Properties();
+		p.setProperty("textFiles", "");
+		ste = new StanfordTriplesExtractor(p);
+		assertNotNull("TriplesCollection is null [2]", ste.getTriplesCollection());
 	}
 
 	/**
 	 * Si no se indica ruta de los archivos a procesar se debe obtener IllegalArgumentException
 	 */
 	@Test(expected=IllegalArgumentException.class)
-	public void testFilesPathToProcessDefault() {
+	public void filesPathToProcessDefaultTest() {
 		StanfordTriplesExtractor ste = new StanfordTriplesExtractor();
 		ste.extractTriples();
 	}
@@ -68,9 +41,10 @@ public class StanfordTriplesExtractorTest {
 	 * Si la ruta de los archivos a procesar es null se debe obtener IllegalArgumentException
 	 */
 	@Test(expected=IllegalArgumentException.class)
-	public void testFilesPathToProcessNull() {
-		StanfordTriplesExtractor ste = new StanfordTriplesExtractor();
-		ste.setTextsPathToProcess(null);
+	public void filesPathToProcessNullTest() {
+		Properties p = new Properties();
+		p.setProperty("textFiles", "");
+		StanfordTriplesExtractor ste = new StanfordTriplesExtractor(p);
 		ste.extractTriples();
 	}
 	
@@ -78,9 +52,34 @@ public class StanfordTriplesExtractorTest {
 	 * Si la ruta de los archivos a procesar no es válida se debe obtener IllegalArgumentException
 	 */
 	@Test(expected=IllegalArgumentException.class)
-	public void testFilesPathToProcessWrong() {
+	public void filesPathToProcessWrongTest() {
+		Properties p = new Properties();
+		p.setProperty("textFiles", "C:\\ssdds\\gh\\ty");
 		StanfordTriplesExtractor ste = new StanfordTriplesExtractor();
-		ste.setTextsPathToProcess("C:\\ssdds\\gh\\ty");
+		ste.setConfiguration(p);
 		ste.extractTriples();
 	}
+	
+//	@Test
+//	public void extractTriplesTest() {
+//		Properties config = new Properties();
+//		config.setProperty("textFiles", "books-little");
+//		
+//		StanfordTriplesExtractor ste = new StanfordTriplesExtractor(config);
+//		TriplesCollection tc = ste.extractTriples();
+//		
+//		assertEquals("Wrong number of triples", 34, tc.getTotalTriples());
+//		
+//		int total = 0;
+//		for (Triple triple: tc.getTriples().keySet()) {
+//			TripleEvents events = tc.getTriples().get(triple);
+//			total += events.getTotalEvents();
+//		}
+//		assertEquals("Wrong number of triples in events", 34, total);
+//		
+//		assertEquals("Wrong files path to process", "books-little", ste.getFilesFolderToParser());
+//		assertEquals("Wrong totalThreads property", Runtime.getRuntime().availableProcessors()-1, ste.getTotalThreads());
+//		assertEquals("Wrong parser model", StanfordTriplesExtractor.MODEL_PARSER_DEPENDENCIES, ste.getParserModel());
+//		assertEquals("Wrong tagger model", StanfordTriplesExtractor.MODEL_TAGGER_DEPENDENCIES, ste.getTaggerModel());
+//	}
 }

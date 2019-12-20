@@ -6,8 +6,8 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -24,16 +24,16 @@ import org.josfranmc.collocatio.triples.TriplesCollection;
 import org.josfranmc.collocatio.util.ThreadFactoryBuilder;
 
 /**
- * Implementa un algoritmo basado en el cálculo del valor denominado "información mutua". Los pasos de este algoritmo de definen en la clase
- * AbstractMutualInformationAlgorithm, de la cual se hereda, implementándose aquí lo dos pasos principales:
+ * Implements an algorithm to obtain collocations by calculating the value of the mutual information.<p>
+ * This algorithm consists of two main steps:
  * <ul>
- * <li>En el primero se obtiene una colección de tripletas mediante el uso de un objeto de tipo StanfordTriplesExtractor, el cual devuelve las
- * tripletas obtenidas encapsuladas en un objeto TriplesCollection</li>
- * <li>En el segundo se calcula el valor de información mutua de las tripletas obtenidas. El cálculo se hace de forma concurrente en dos fases. En la primera 
- * se obtienen los datos de las frecuencias necesarias para aplicar la fórmula y en el segundo se utilizan estos datos para realizar el cálculo.
+ * <li>First, get a collection of dependencies in the form of triples using a <code>StanfordTriplesExtractor</code> object. This object
+ * returns the triples obtained as a <code>TriplesCollection</code> object.
+ * </li>
+ * <li>Second, calculate the mutual information value for each triple in the <code>TriplesCollection</code> object.
  * </ul>
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  * @see AbstractMutualInformationAlgorithm
  * @see StanfordTriplesExtractor
  * @see TriplesCollection
@@ -43,28 +43,7 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	private static final Logger log = Logger.getLogger(MutualInformationAlgorithm.class);
 	
 	/**
-	 * Ruta de los ficheros a procesar
-	 */
-	private String textsPathToProcess = null;
-	
-	/**
-	 * Número total de hilos a ejecutar
-	 */
-	private int totalThreads;
-	
-	/**
-	 * Parámetros para al analizador de Stanford
-	 */
-	private HashMap<String, String> stanfordOptions = null;
-	
-	/**
-	 * Parser de Stanford a utilizar.
-	 * Se utiliza en el algoritmo de cálculo de información mutua (AlgorithmType.MUTUAL_INFORMATION)
-	 */
-	private String model = null;
-	
-	/**
-	 * Tipos de dependencia de las tripletas en los que basar la búsqueda de colocaciones
+	 * Types of dependencies to consider in the calculation (null all the dependencies are considered)
 	 */
 	private List<String> triplesFilter = null;
 	
@@ -74,37 +53,82 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	private boolean saveInDB = true;
 
 	/**
-	 * Constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta  P(w1,rel,w2)
-	 */
-	private double adjustedFrequency = 0.0;
-	
-	/**
 	 * Nombre de la base de datos a utilizar
 	 */
 	private String dataBaseName = null;
 
 	
+	
+	
 	/**
-	 * Constructor por defecto.
+	 * Setting parameters
+	 */
+	private Properties properties;
+	
+	/**
+	 * To extract dependencies
+	 */
+	private StanfordTriplesExtractor extractor;
+	
+	/**
+	 * Default constructor.
 	 */
 	MutualInformationAlgorithm() {
-		
+		properties = new Properties();
+		extractor = new StanfordTriplesExtractor();
 	}
 	
 	/**
-	 * Implementa el proceso de extracción de tripletas. Este proceso se lleva a acabo mediante un objeto StanfordTriplesExtractor.
-	 * Se configura este objeto con los parámetros recibidos, se invoca al proceso de extracción y se obtiene un objeto TriplesCollection,
-	 * el cual encapsula el conjunto de tripletas que se han obtenido
+	 * Sets parameters to configure the algorithm.
+	 * @param properties parameters 
+	 */
+	public void setConfiguration(Properties properties) {
+		this.properties = (Properties) properties.clone();
+		this.extractor.setConfiguration(this.properties);
+	}
+	
+	/**
+	 * Implements the triples extraction process.<p>
+	 * This process is executed through a <code>StanfordTriplesExtractor</code> object. As result, a <code>TriplesCollection</code> object with all the triples is obtained.
+	 * @see StanfordTriplesExtractor
+	 * @see TriplesCollection
 	 */
 	@Override
 	protected TriplesCollection extractTriples() {
-		StanfordTriplesExtractor ste = new StanfordTriplesExtractor();
-		ste.setModel(getModel());
-		ste.setTextsPathToProcess(getTextsPathToProcess());
-		ste.setTotalThreads(getTotalThreads());
-		ste.setStanfordOptions(getStanfordOptions());
-		return ste.extractTriples();
+		return extractor.extractTriples();
 	}
+
+	/**
+	 * Returns the parser model to be used.
+	 * @return the parser model to be used
+	 */
+	public String getParserModel() {
+		return extractor.getParserModel();
+	}
+	
+	/**
+	 * Returns the tagger model to be used.
+	 * @return the tagger model to be used
+	 */
+	public String getTaggerModel() {
+		return extractor.getTaggerModel();
+	}
+	/**
+	 * Returns the path to the folder that contains the files to be parse.
+	 * @return the path to the folder that contains the files to be parse
+	 */
+	public String getFilesFolderToParser() {
+		return properties.getProperty("textFiles");
+	}
+	
+	/**
+	 * Returns  the number of threads to be runned.
+	 * @return  the number of threads to be runned
+	 */
+	public int getTotalThreads() {
+		return extractor.getTotalThreads();
+	}
+	
 
 	/**
 	 *  Implementa el proceso de cálculo del valor "información mutua" de las tripletas obtenidas previamente. El cálculo se hace de forma
@@ -133,9 +157,9 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 					executorServiceFreq = Executors.newFixedThreadPool(getTotalThreads(), getThreadFactory("FregThread"));
 					final ExecutorCompletionService<TriplesData> completionService = new ExecutorCompletionService<>(executorServiceFreq);
 					log.info("Calculando datos de frecuencia...");
-					for (String dependency : triplesCollection.getDependenciesCollection()) {
+					for (String dependency : triplesCollection.getDependencies()) {
 						if (isSelectedDependency(dependency)) {
-							ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(triplesCollection.getTriplesCollection(), dependency);
+							ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(triplesCollection.getTriples(), dependency);
 							completionService.submit(etdt);
 							totalThreads++;
 						}
@@ -184,15 +208,28 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	}	
 
 	/**
+	 * @return el valor de la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta
+	 */
+	public double getAdjustedFrequency() {
+		double adjustedFrequency = 1;
+		try {
+			adjustedFrequency = Double.parseDouble(properties.getProperty("adjustedFrequency"));
+		} catch (Exception e) {
+
+		}		
+		return adjustedFrequency;
+	}
+	
+	/**
 	 * @return un ThreadFactory para que personaliza los hilos a lanzar
 	 */
 	private ThreadFactory getThreadFactory(String name) {
-		ThreadFactory threadFactoryBuilder = new ThreadFactoryBuilder()
+		ThreadFactory threadFactory = new ThreadFactoryBuilder()
 				.setNameThread(name)
                 .setDaemon(false)
                 .setPriority(Thread.MAX_PRIORITY)
                 .build();
-		return threadFactoryBuilder;
+		return threadFactory;
 	}
 	
 	/**
@@ -338,66 +375,36 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	public void setTriplesFilter(List<String> list) {
 		this.triplesFilter = list;
 	}
-
-	/**
-	 * @return los parámetros de configuración para el analizador de Stanford
-	 */
-	public HashMap<String, String> getStanfordOptions() {
-		return stanfordOptions;
-	}
-
-	/**
-	 * Establece los parámetros de configuración para el analizador de Stanford
-	 * @param stanfordOptions colección de parámetros
-	 */
-	public void setStanfordOptions(HashMap<String, String> stanfordOptions) {
-		this.stanfordOptions = stanfordOptions;
-	}
 	
-	/**
-	 * @return el parser de Stanford a utilizar
-	 */
-	public String getModel() {
-		return model;
-	}
 
-	/**
-	 * Establece el parser a utilizar son el software de Stanford.
-	 * @param model ruta del fichero que contiene el parser a cargar
-	 */
-	public void setModel(String model) {
-		this.model = model;
-	}
+//	
+//	public void setParserModel(String model) {
+//		this.parserModel = model;
+//	}
+//	
 
-	/**
-	 * @return la ruta de la carpeta que contiene los archivos a analizar
-	 */
-	public String getTextsPathToProcess() {
-		return textsPathToProcess;
-	}
+//	
+//	public void setTaggerModel(String model) {
+//		this.taggerModel = model;
+//	}
+//
 
-	/**
-	 * Establece la carpeta que contiene los archivos a analizar
-	 * @param textsPathToProcess ruta de la carpeta que contiene los archivos a analizar
-	 */
-	public void setTextsPathToProcess(String textsPathToProcess) {
-		this.textsPathToProcess = textsPathToProcess;
-	}
+//
+//	/**
+//	 * Establece la carpeta que contiene los archivos a analizar
+//	 * @param filesFolderToProcess ruta de la carpeta que contiene los archivos a analizar
+//	 */
+//	public void setFilesFolderToProcess(String filesFolderToProcess) {
+//		this.filesFolderToProcess = filesFolderToProcess;
+//	}
 
-	/**
-	 * @return el número total de hilos a ejecutar
-	 */
-	public int getTotalThreads() {
-		return totalThreads;
-	}
-
-	/**
-	 * Establece el número total de hilos a ejecutar
-	 * @param totalThreads número total de hilos a ejecutar
-	 */
-	public void setTotalThreads(int totalThreads) {
-		this.totalThreads = totalThreads;
-	}
+//	/**
+//	 * Sets the number of threads to be runned.
+//	 * @param totalThreads the number of threads
+//	 */
+//	public void setTotalThreads(int totalThreads) {
+//		this.totalThreads = totalThreads;
+//	}
 
 	/**
 	 * @return <i>true</i> si se deben guardar los resultados obtenidos en base de datos, <i>false</i> en caso contrario
@@ -414,20 +421,29 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 		this.saveInDB = saveInDB;
 	}
 
-	/**
-	 * @return el valor de la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta
-	 */
-	public double getAdjustedFrequency() {
-		return adjustedFrequency;
-	}
-
-	/**
-	 * Establece la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta: <i>P(w1,rel,w2)</i>
-	 * @param adjustedFrequency valor de la constante de ajuste
-	 */
-	public void setAdjustedFrequency(double adjustedFrequency) {
-		this.adjustedFrequency = adjustedFrequency;
-	}
+//	/**
+//	 * Establece la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta: <i>P(w1,rel,w2)</i>
+//	 * @param adjustedFrequency valor de la constante de ajuste
+//	 */
+//	public void setAdjustedFrequency(double adjustedFrequency) {
+//		this.adjustedFrequency = adjustedFrequency;
+//	}
+	
+//	/**
+//	 * Returns the maximum length of the sentences to be processed.
+//	 * @return the maximum length of the sentences to be processed
+//	 */
+//	public int getMaxLenSentence() {
+//		return maxLenSentence;
+//	}
+//
+//	/**
+//	 * Sets the maximum length of the sentences to be processed.
+//	 * @param maxLenSentence length of the sentences
+//	 */
+//	public void setMaxLenSentence(int maxLenSentence) {
+//		this.maxLenSentence = maxLenSentence;
+//	}
 
 	/**
 	 * @return el nombre de la base de datos a utilizar

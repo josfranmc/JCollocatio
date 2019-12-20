@@ -4,54 +4,64 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Permite guardar el número de veces que se ha encontrado una tripleta y el cojunto de libros en los que esto ha sucedido.<p>
- * Los objetos de esta clase se usan dentro de la clase TriplesCollection, utilizándose para guardar las ocurrencias de cada tripleta. Para cada
- * tripleta encontrada se asociará un objeto TripleEvents que guardará un conjunto con los libros en los que ha aparecido la tripleta y las veces
- * que esto ha suceddio.
+ * The objects of this class act as a counter to the triples found. They allow you to save the number of times a triple is found and where.<p>
+ * These objects are used inside of <code>TriplesCollection</code> class to save in a map the occurrences of each triple.
+ * For each triple found a <code>TripleEvents</code> is assigned.
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  * @see TriplesCollection
  */
 public class TripleEvents {
 
 	/**
-	 * Conjunto de libros en los que se ha encontrado una tripleta concreta
+	 * Set of files where triples are found
 	 */
-	private Set<String> books;
+	private Set<String> files;
 	
 	/**
-	 * Número de veces que se ha encontrado una tripleta determinada
+	 *  The number of times a triplet has been found
 	 */
 	private long totalEvents;
 
 	
 	/**
-	 * Constructor principal.  
-	 * @param book
+	 * Default constructor.  
+	 * @param file name of the file to add
 	 */
-	public TripleEvents(String book) {
-		this.books = new HashSet<String>();
-		addEvent(book);
+	TripleEvents(String file) {
+		this.files = new HashSet<>();
+		addEvent(file);
 	}
 	
 	/**
-	 * Añade un libro al conjunto e incrementa en uno el contador de apariciones.
-	 * @param book
+	 * Adds the name of the file where a triple is founded and increase the event counter by one.
+	 * @param file name of the file to add
 	 */
-	public void addEvent(String book) {
-		this.books.add(book);
+	public void addEvent(String file) {
+		this.files.add(file);
 		this.totalEvents++;
 	}
 	
 	/**
-	 * @return el conjunto de libros en los que se ha encontrado una tripleta concreta
+	 * Updates the object with the data of a <code>TripleEvents</code> object. Adds the name of the files and sums the counter.
+	 * @param event data to add
 	 */
-	public Set<String> getBooks() {
-		return books;
+	public void addEvent(TripleEvents event) {
+		this.files.addAll(event.getFiles());
+		this.totalEvents += event.getTotalEvents();
+	}
+	
+	/**
+	 * Returns the set of files where a triple was found.
+	 * @return the set of files where a triple was found
+	 */
+	public Set<String> getFiles() {
+		return files;
 	}
 
 	/**
-	 * @return el número de veces que se ha encontrado una tripleta
+	 * Returns the number of times a triple has been found.
+	 * @return the number of times a triple has been found
 	 */
 	public long getTotalEvents() {
 		return totalEvents;

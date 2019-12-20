@@ -1,191 +1,143 @@
 package org.josfranmc.collocatio.triples;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.log4j.Logger;
-
 import edu.stanford.nlp.ling.HasWord;
-import edu.stanford.nlp.parser.lexparser.LexicalizedParser;
+import edu.stanford.nlp.ling.TaggedWord;
+import edu.stanford.nlp.parser.nndep.DependencyParser;
+import edu.stanford.nlp.process.DocumentPreprocessor;
+import edu.stanford.nlp.tagger.maxent.MaxentTagger;
 import edu.stanford.nlp.trees.GrammaticalStructure;
-import edu.stanford.nlp.trees.GrammaticalStructureFactory;
-import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.trees.TypedDependency;
 
 /**
- * Encapsula el proceso de análisis de una oración para extraer las tripletas que la componen y lleva a cabo el almacenamiento de las mismas.
- * Los objetos ParserThread implementan la interfaz Runnable por lo que pueden ser ejecutados de forma concurrente. De esta forma se puede realizar
- * el análisis de varias oriaciones de forma paralela.<p>
- * La creación de estos objetos debe hacerse utilizando ParserThreadBuilder, de forma que se realice una correcta configuración.
+ * Performs the parse of a file in order to extract the dependencies as triples.<p>
+ * To create an object of this class the <code>ParserThreadBuilder</code> object must be used.<p>
+ * These objects implements the <code>Callable</code> interface so they can be executed concurrently. In particular, a <code>ParserThread</code> object
+ * is created and runned as independent thread from a <code>StanfordTriplesExtractor</code> object.
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
+ * @see ParserThreadBuilder
+ * @see StanfordTriplesExtractor
+ * @see TriplesCollection
  */
-public class ParserThread implements Runnable {
+class ParserThread implements Callable<Integer> {
 
-	private static final Logger log = Logger.getLogger(ParserThread.class);
+	//private static final Logger log = Logger.getLogger(ParserThread.class);
+
+	private MaxentTagger tagger;
 	
-	/**
-	 * Referencia al objeto LexicalizedParser del software de Stanford utilizado para el análisis
-	 */
-	private LexicalizedParser lp;
-	
-	/**
-	 * Referencia al objeto GrammaticalStructureFactory del software de Stanford utilizado para el análisis
-	 */
-	private GrammaticalStructureFactory gsf;
+	private DependencyParser parser; 
 
 	/**
-	 * Oración a analizar de la que obtener sus tripletas
+	 * The path of the file to be process
 	 */
-	private List<? extends HasWord> sentence;
+	private String filePath;
 	
 	/**
-	 * Identificador del libro en el que se encuantra la oración a analizar
+	 * Maximum length of sentences to be processed
 	 */
-	private String book;
+	private int maxLenSentence;
 	
 	/**
-	 * Colección donde almacenar las tripletas obtenidas
+	 * Reference to the object that stores the triples obtained
 	 * @see TriplesCollection
 	 */
 	private TriplesCollection triplesCollection;
-	
 
+	
 	/**
-	 * Obtiene una lista de las tripletas contenidas en una oración
-	 * @return lista de tripletas
+	 * Default constructor.
 	 */
-	private List<TypedDependency> getTriplesList() {
-        Tree parse = lp.parse(sentence);
-        GrammaticalStructure gs = gsf.newGrammaticalStructure(parse);
-        List<TypedDependency> tdl = gs.typedDependenciesCCprocessed();
-        return tdl;
+	ParserThread() {
+		
 	}
 	
 	/**
-	 * Realiza la extracción y almacenamiento de las tripletas contenidas en una oración
+	 * Parsing a file and performs the extraction and storage of the triples.
+	 * @return the number of sentences parsed
 	 * @see Triple
+	 * @see TripleCollection
 	 */
 	@Override
-	public void run() {
-		log.debug(" +++ Analizando " + sentence.toString());
-        for (TypedDependency td : getTriplesList()) { 
-        	log.debug(" triple = " + td.toString());
-        	Triple triple = getTriplet(td.toString(), getBook());
-        	if (triple != null) {
-        		triplesCollection.save(triple, getBook());
-        	} else {
-        		log.warn(Thread.currentThread().getName() + " - Imposible descomponer " + td.toString());
-        	}
+	public Integer call() {
+		Integer totalSentences = 0;
+		List<Triple> triples = new ArrayList<>();
+	    DocumentPreprocessor sentences = new DocumentPreprocessor(this.filePath);
+	    
+	    for (List<HasWord> sentence : sentences) {
+	    	if (sentence.size() <= getMaxLenSentence()) {
+	        	List<TaggedWord> tagged = tagger.tagSentence(sentence);
+	        	GrammaticalStructure gs = parser.predict(tagged);
+	           
+	        	for (TypedDependency td : gs.typedDependenciesCCprocessed()) { 
+	            	Triple triple = getTriple(td.toString());
+	            	if (triple != null) {
+	            		triples.add(triple);
+	            	}
+	            }
+	        	totalSentences++;
+	    	}
         }
-		log.debug("Fin hilo " + Thread.currentThread().getName());
+	    triplesCollection.save(triples, getFileName());
+		//log.debug("End thread " + Thread.currentThread().getName());
+		//log.debug("  triples obtained " + triplesCollection.getTotalTriples());
+		//log.debug("  map size " + triplesCollection.getTriples().size());
+		return totalSentences;
 	}
 	
 	/**
-	 * Devuelve un objeto de tipo Triple basado en los datos pasados por parámetros.<br>
-	 * La cadena de texto pasada representa una tripleta de la forma <i>dependencia(palabra1-posicion1, palabra2-posicion2)</i>, donde:
-	 * <ul>
-	 * <li><i>dependencia</i>: tipo de dependencia de la tripleta</li>
-	 * <li><i>palabra1</i>: palabra 1 de la tripleta</li>
-	 * <li><i>posicion1</i>: posicion que ocupa la palabra 1 en la oración de donde se ha extraido la tripleta</li>
-	 * <li><i>palabra2</i>: palabra 2 de la tripleta</li>
-	 * <li><i>posicion2</i>: posicion que ocupa la palabra 2 en la oración de donde se ha extraido la tripleta</li>
-	 * </ul>
-	 * Ejemplo: <i>nsubj(blue-4, cars-2)</i><p>
-	 * Puede darse el caso de tripletas cuya dependencia sea de la forma <i>dependencia:subtipo</i>, como <i>nmod:in(happy-3, town-6)</i>.
-	 * En estos casos se toma como dependencia sólo la parte principal, la correspondiente desde la izquierda hasta los dos puntos.<p>
-	 * Todas las palabras obtenidas se devuelven en minúsculas.
-	 * @param td cadena de texto que representa la tripleta a obtener; contiene el tipo de dependencia y las dos palabras que relaciona
-	 * @param idBook identificador del libro en el que se encuentra la tripleta
-	 * @return objeto de tipo Triple
+	 * Returns a <code>Triple</code> object according to the passed parameter-<p>
+	 * The parameter represents a triple with the shape <i>dependency(head_word-position1, dependant_word-position2)</i>.<br>
+	 * e.g: <i>det(car-2, the-1)</i><p>
+	 * There may be dependencies with the shape <i>dependency:subtype</i>. In these cases, the main part only is taken (from the left to the colon).<br>
+	 * e.g: <i>nmod:in(happy-3, town-6)</i>, -> <i>nmod</i> is taken<p>
+	 * All words obtained are returned in lowercase.
+	 * @param dependency dependency that represents the triple to obtain
+	 * @return a <code>Triple</code> object
 	 * @see Triple
 	 */
-	private Triple getTriplet(String td, String idBook) {
-    	Triple tripleta = null;
-    	// expresión regular para extraer la dependencia y las dos palabras que relaciona
-    	// ((.*):.*|(.*))\\(  extrae la dependencia
-    	// (.*)-.*,\\s        extrae la palabra 1
-    	// (.*)-.*            extrae la palabra 2
-    	final String PATTERN = "((.*):.*|(.*))\\((.*)-.*,\\s(.*)-.*";
+	private Triple getTriple(String dependency) {
+    	Triple triple = null;
+    	// regular expression
+    	// ((.*):.*|(.*))\\(  extract dependency
+    	// (.*)-(\\d*),\\s    extract head word and position
+    	// (.*)-(\\d*)\\)     extract dependent word and position
+    	final String PATTERN = "((.*):.*|(.*))\\((.*)-(\\d*),\\s(.*)-(\\d*)\\)";
     
 		Pattern pattern = Pattern.compile(PATTERN);
-		Matcher matcher = pattern.matcher(td);
+		Matcher matcher = pattern.matcher(dependency);
 		if (matcher.matches()) {
-			tripleta = new Triple();
+			triple = new Triple();
 	    	// si la dependencia es del tipo dependencia:subtipo se obtiene en el grupo 2, si no en el grupo 3
 	    	if (matcher.group(3) != null) {
-	    		tripleta.setDependency(matcher.group(3));
+	    		triple.setDependency(matcher.group(3));
 	    	} else {
-	    		tripleta.setDependency(matcher.group(2));
+	    		triple.setDependency(matcher.group(2));
 	    	}
-	    	tripleta.setWord1(matcher.group(4).toLowerCase());
-	    	tripleta.setWord2(matcher.group(5).toLowerCase());
+	    	triple.setHead(matcher.group(4).toLowerCase());
+	    	triple.setDependent(matcher.group(6).toLowerCase());
+	    	int distance = Integer.valueOf(matcher.group(7)) - Integer.valueOf(matcher.group(5)) - 1;
+	    	triple.setDistance(distance);
 		}
-		return tripleta;
+		return triple;
 	}
 
 	/**
-	 * @return objeto LexicalizedParser
-	 * @see LexicalizedParser
-	 */
-	LexicalizedParser getLp() {
-		return lp;
-	}
-
-	/**
-	 * Establece el LexicalizedParser utilizado para parsear la oracióna a analizar
-	 * @param lp objeto LexicalizedParser
-	 * @see LexicalizedParser
-	 */
-	void setLp(LexicalizedParser lp) {
-		this.lp = lp;
-	}
-
-	/**
-	 * @return objeto GrammaticalStructureFactory
-	 * @see GrammaticalStructureFactory
-	 */
-	GrammaticalStructureFactory getGsf() {
-		return gsf;
-	}
-
-	/**
-	 * Establece la factoría para obtener un GrammaticalStructure
-	 * @param gsf objeto GrammaticalStructureFactory
-	 * @see GrammaticalStructureFactory
-	 */
-	void setGsf(GrammaticalStructureFactory gsf) {
-		this.gsf = gsf;
-	}
-
-	/**
-	 * @return oración a analizar
-	 * @see HasWord
-	 */
-	List<? extends HasWord> getSentence() {
-		return sentence;
-	}
-
-	/**
-	 * Establece la oración a analizar
-	 * @param sentence oración a analizar
-	 * @see HasWord
-	 */
-	void setSentence(List<? extends HasWord> sentence) {
-		this.sentence = sentence;
-	}
-
-	/**
-	 * @return el objeto que sirve para almacenar las tripletas obtenidas
+	 * Returns the object that stores the triples obtained.
+	 * @return the object that stores the triples obtained
 	 */
 	public TriplesCollection getTriplesCollection() {
 		return this.triplesCollection;
 	}
 	
 	/**
-	 * Establece el objeto que sirve para almacenar las tripletas obtenidas
-	 * @param triplesCollecion donde guardar las tripletas
+	 * Sets the object that stores the triples obtained.
+	 * @param triplesCollecion where the triples are stored
 	 * @see TriplesCollection
 	 */
 	public void setTriplesCollection(TriplesCollection triplesCollecion) {
@@ -193,17 +145,74 @@ public class ParserThread implements Runnable {
 	}
 	
 	/**
-	 * @return el identificador del libro al que pertenece la oracióna analizar
+	 * Returns the path of the file to parser..
+	 * @return the path of the file to parser.
 	 */
-	String getBook() {
-		return book;
+	String getFile() {
+		return filePath;
 	}
 
 	/**
-	 * Establece el identificador del libro al que pertenece la oracióna analizar
-	 * @param book identifiador del libro
+	 * Sets the path of the file to parser.
+	 * @param file file path
 	 */
-	void setBook(String book) {
-		this.book = book;
+	void setFile(String file) {
+		this.filePath = file;
+	}
+	
+	/**
+	 * Returns the name of the file to parser.
+	 * @return the name of the file to parser.
+	 */
+	private String getFileName() {
+		return filePath.substring(filePath.lastIndexOf(System.getProperty("file.separator"))+1, filePath.lastIndexOf("."));
+	}
+
+	/**
+	 * Returns the path of the tagger model.
+	 * @return the path of the tagger model
+	 */
+	public MaxentTagger getTagger() {
+		return tagger;
+	}
+
+	/**
+	 * Sets the tagger model to be used.
+	 * @param tagger the path of the tagger model
+	 */
+	public void setTagger(MaxentTagger tagger) {
+		this.tagger = tagger;
+	}
+
+	/**
+	 * Returns the parser model to be used.
+	 * @return the parser model to be used.
+	 */
+	public DependencyParser getParser() {
+		return parser;
+	}
+
+	/**
+	 * Sets the parser model to be used.
+	 * @param parser the path of the parser model
+	 */
+	public void setParser(DependencyParser parser) {
+		this.parser = parser;
+	}
+	
+	/**
+	 * Returns the maximum length of the sentences to be processed.
+	 * @return the maximum length of the sentences to be processed
+	 */
+	public int getMaxLenSentence() {
+		return this.maxLenSentence;
+	}
+
+	/**
+	 * Sets the maximum length of the sentences to be processed
+	 * @param maxLenSentence length of the sentences
+	 */
+	public void setMaxLenSentence(int maxLenSentence) {
+		this.maxLenSentence = maxLenSentence;
 	}
 }

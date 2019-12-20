@@ -1,32 +1,26 @@
 package org.josfranmc.collocatio.algorithms;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
+import java.util.Properties;
+
+import org.josfranmc.collocatio.triples.StanfordTriplesExtractor;
 import org.junit.Test;
 
 /**
  * Clase que implementa los test para probar los métodos de la clase CollocationAlgorithmBuilder
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  */
 public class CollocationAlgorithmBuilderTest {
-
-	/**
-	 * Si no se asignan parámetros antes de llamar a build, entonces se debe obtener una excepción del tipo IllegalArgumentException
-	 */
-	@Test(expected=IllegalArgumentException.class)
-	public void testParamsAlgorithmBeforeBuild() {
-		new CollocationAlgorithmBuilder().build();
-	}
 	
 	/**
 	 * Si el objeto que encapsula los parámetros de configuración del algoritmo es null, entonces se debe obtener una excepción del tipo IllegalArgumentException
 	 */
 	@Test(expected=IllegalArgumentException.class)
-	public void givenParamsAlgorithmWhenNullThenThrowIllegalArgumentException() {
-		ParamsAlgorithm params = null;
-		new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
+	public void givenPropertiesWhenNullThenThrowIllegalArgumentException() {
+		Properties properties = null;
+		new CollocationAlgorithmBuilder().setConfiguration(properties).build();
 	}
 
 	/**
@@ -34,88 +28,114 @@ public class CollocationAlgorithmBuilderTest {
 	 */
 	@Test(expected=IllegalArgumentException.class)
 	public void givenAlgorithmTypeWhenNullThenThrowIllegalArgumentException() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setAlgorithmType(null);
-		new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
+		Properties properties = new Properties();
+		properties.put("type", "");
+		new CollocationAlgorithmBuilder().setConfiguration(properties).build();
 	}
 	
 	/**
-	 * Si el parámetro TotalThreads es menor que uno, entonces se debe obtener una excepción del tipo IllegalArgumentException
+	 * Si el parámetro que indica el tipo de algoritmo es null, entonces se debe obtener una excepción del tipo IllegalArgumentException
 	 */
 	@Test(expected=IllegalArgumentException.class)
-	public void givenTotalThreadsWhenLessThanOneThenThrowIllegalArgumentException() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setTotalThreads(0);
-		new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
+	public void givenAlgorithmTypeWhenWrongValueThenThrowIllegalArgumentException() {
+		Properties properties = new Properties();
+		properties.put("type", "BadBad");
+		new CollocationAlgorithmBuilder().setConfiguration(properties).build();
 	}	
 	
 	/**
-	 * Si el parámetro TextsPathToProcess para el algoritmo MutualInformation es null, entonces se debe obtener una excepción del tipo IllegalArgumentException
+	 * Si el parámetro filesPathToProcess es null, entonces se debe obtener una excepción del tipo IllegalArgumentException
 	 */
 	@Test(expected=IllegalArgumentException.class)
-	public void givenMutualInformationWhenTextsPathToProcessIsNullThenThrowIllegalArgumentException() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
-		params.setTextsPathToProcess(null);
-		new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
+	public void givenMutualInformationWhenFilesPathToProcessIsNullThenThrowIllegalArgumentException() {
+		Properties p = new Properties();
+		p.setProperty("type", "MUTUAL_INFORMATION");
+		new CollocationAlgorithmBuilder().setConfiguration(p).build();
 	}
 	
 	/**
-	 * Si el parámetro TextsPathToProcess para el algoritmo MutualInformation es una cadena vacía, entonces se debe obtener una excepción del tipo IllegalArgumentException
+	 * Si el parámetro FilesPathToProcess es una ruta inválida, entonces se debe obtener una excepción del tipo IllegalArgumentException
 	 */
 	@Test(expected=IllegalArgumentException.class)
-	public void givenMutualInformationWhenTextsPathToProcessIsEmptyThenThrowIllegalArgumentException() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
-		params.setTextsPathToProcess("");
-		new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
+	public void givenMutualInformationWhenFilesPathToProcessIsEmptyThenThrowIllegalArgumentException() {
+		Properties p = new Properties();
+		p.setProperty("type", "MUTUAL_INFORMATION");
+		p.setProperty("textFiles", "badbad");
+		new CollocationAlgorithmBuilder().setConfiguration(p).build();
 	}
 	
 	/**
-	 * Si el modelo (parser) utilizado para el algoritmo MutualInformation es null, entonces se debe cargar el modelo para el idioma inglés
+	 * Si el modelo (parser) utilizado para el algoritmo MutualInformation es null, entonces se debe cargar el modelo por defecto
 	 */
-	@Test(expected=IllegalArgumentException.class)
-	public void givenMutualInformationWhenModelIsNullThenLoadEnglishModel() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
-		params.setModel(null);
-		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
-		assertEquals("No se ha cargado english model por defecto", "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz", mia.getModel());
+	@Test
+	public void givenMutualInformationWhenParserModelIsNullThenLoadDefault() {
+		Properties p = new Properties();
+		p.setProperty("type", "MUTUAL_INFORMATION");
+		p.setProperty("textFiles", "books");
+		
+		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setConfiguration(p).build();
+		assertEquals("Wrong parser model", StanfordTriplesExtractor.MODEL_PARSER_DEPENDENCIES, mia.getParserModel());
 	}
 	
 	/**
-	 * Si se indica un nombre para una nueva base de datos se le debe añadir el prefijo col_
+	 * Si el tagger utilizado para el algoritmo MutualInformation es null, entonces se debe cargar el por defecto
 	 */
-	@Test(expected=IllegalArgumentException.class)
-	public void givenMutualInformationWhenNewDbThenAddPrefix() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
-		params.setNewDataBase("ejemplo");
-		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
-		assertEquals("Nombre de base de datos incorrecto", "col_ejemplo", mia.getDataBaseName());
+	@Test
+	public void givenMutualInformationWhenTaggerrModelIsNullThenLoadDefault() {
+		Properties p = new Properties();
+		p.setProperty("type", "MUTUAL_INFORMATION");
+		p.setProperty("textFiles", "books");
+		
+		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setConfiguration(p).build();
+		assertEquals("Wrong tagger model", StanfordTriplesExtractor.MODEL_TAGGER_DEPENDENCIES, mia.getTaggerModel());
 	}
 	
 	/**
-	 * Si se pasa null como nombre para una nueva base de datos se debe devolver null al consultarlo
+	 * Si el tagger utilizado para el algoritmo MutualInformation es null, entonces se debe cargar el por defecto
 	 */
-	@Test(expected=IllegalArgumentException.class)
-	public void givenMutualInformationWhenNoNewDbThenNull() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
-		params.setNewDataBase(null);
-		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
-		assertNull("No se ha indicado nueva db, el nombre debería ser null", mia.getDataBaseName());
+	@Test
+	public void givenMutualInformationWhenAdjustedFrequencyIsNullThenLoadDefault() {
+		Properties p = new Properties();
+		p.setProperty("type", "MUTUAL_INFORMATION");
+		p.setProperty("textFiles", "books");
+		
+		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setConfiguration(p).build();
+		assertEquals("Wrong adjusted frequency", 1, mia.getAdjustedFrequency(), 0.001);
 	}
 	
-	/**
-	 * Si se pasa una cadena vacía como nombre para una nueva base de datos se debe devolver null al consultarlo
-	 */
-	@Test(expected=IllegalArgumentException.class)
-	public void givenMutualInformationWhenNewDbEmptyThenNull() {
-		ParamsAlgorithm params = new ParamsAlgorithm();
-		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
-		params.setNewDataBase("");
-		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setAlgorithmConfig(params).build();
-		assertNull("Nombre para nueva db vacío, el nombre debería ser null", mia.getDataBaseName());
-	}
+//	/**
+//	 * Si se indica un nombre para una nueva base de datos se le debe añadir el prefijo col_
+//	 */
+//	@Test(expected=IllegalArgumentException.class)
+//	public void givenMutualInformationWhenNewDbThenAddPrefix() {
+//		ParamsAlgorithm params = new ParamsAlgorithm();
+//		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
+//		params.setNewDataBase("ejemplo");
+//		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setConfiguration(params).build();
+//		assertEquals("Nombre de base de datos incorrecto", "col_ejemplo", mia.getDataBaseName());
+//	}
+//	
+//	/**
+//	 * Si se pasa null como nombre para una nueva base de datos se debe devolver null al consultarlo
+//	 */
+//	@Test(expected=IllegalArgumentException.class)
+//	public void givenMutualInformationWhenNoNewDbThenNull() {
+//		ParamsAlgorithm params = new ParamsAlgorithm();
+//		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
+//		params.setNewDataBase(null);
+//		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setConfiguration(params).build();
+//		assertNull("No se ha indicado nueva db, el nombre debería ser null", mia.getDataBaseName());
+//	}
+//	
+//	/**
+//	 * Si se pasa una cadena vacía como nombre para una nueva base de datos se debe devolver null al consultarlo
+//	 */
+//	@Test(expected=IllegalArgumentException.class)
+//	public void givenMutualInformationWhenNewDbEmptyThenNull() {
+//		ParamsAlgorithm params = new ParamsAlgorithm();
+//		params.setAlgorithmType(AlgorithmType.MUTUAL_INFORMATION);
+//		params.setNewDataBase("");
+//		MutualInformationAlgorithm mia = (MutualInformationAlgorithm) new CollocationAlgorithmBuilder().setConfiguration(params).build();
+//		assertNull("Nombre para nueva db vacío, el nombre debería ser null", mia.getDataBaseName());
+//	}
 }

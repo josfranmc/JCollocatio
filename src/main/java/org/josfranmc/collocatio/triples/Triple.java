@@ -3,97 +3,126 @@ package org.josfranmc.collocatio.triples;
 import java.io.Serializable;
 
 /**
- * Representa una tripleta lingüística según el formato de dependencias universales.<br>
- * Una tripleta está formada por un tipo de <i>dependencia</i> y por dos palabras que se relacionan por ese tipo de dependencia. Denominamos como <i>palabra 1</i>
- * a la palabra situada a la izquierda y como <i>palabra 2</i> a la situada a la derecha.<p>
- * Dos tripletas son iguales si tienen la misma <i>dependencia</i>, la misma <i>palabra 1</i> y la misma <i>palabra 2</i>.
+ * It represents a linguistic triple according to universal dependencies format.<p>
+ * A triple is formed by a type of dependency and two words  that are related to each other by that dependency.
+ * The first word is called <i>head</i> (or <i>governor</i>) and the second one is called <i>dependent</i>.<p>
+ * Two triples are equals if they have the same dependency and the same <i>head</i> and <i>dependant</i> words.
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  */
 public class Triple implements Serializable {
 
 	private static final long serialVersionUID = -176602567035892229L;
 	
 	/**
-	 * Tipo de dependencia
+	 * Dependency type of the triple
 	 */
 	private String dependency;
 	
 	/**
-	 * Palabra 1 de la tripleta
+	 * Head (governor) word of the triple
 	 */
-	private String word1;
+	private String head;
 	
 	/**
-	 * Palabra 2 de la tripleta
+	 * Dependent word of the triple
 	 */
-	private String word2;
+	private String dependent;
 	
 	/**
-	 * Valor de información mutua calculado para esta tripleta
+	 * Number of words between head and dependent
+	 */
+	private int distance;
+	
+	/**
+	 * Mutual information value for this triple
 	 */
 	private double mutualInformation;
 
 
+	/**
+	 * Default constructor.
+	 */
 	public Triple() {
-
+		this.distance = 0;
+		this.mutualInformation = 0;
 	}
 	
 	/**
-	 * @return el tipo de dependencia de la tripleta
+	 * Returns the dependency of the triple.
+	 * @return the dependency of the triple
 	 */
 	public String getDependency() {
 		return dependency;
 	}
 
 	/**
-	 * Establece el tipo de dependencia de la tripleta
-	 * @param dependency tipo de dependencia
+	 * Sets the dependency of the triple.
+	 * @param dependency dependency type
 	 */
 	public void setDependency(String dependency) {
 		this.dependency = dependency;
 	}
 
 	/**
-	 * @return la palabra 1 de la tripleta
+	 * Returns the head (governor) word of the triple.
+	 * @return the head (governor) word of the triple
 	 */
-	public String getWord1() {
-		return word1;
+	public String getHead() {
+		return head;
 	}
 
 	/**
-	 * Establece la <i>palabra 1</i> de la tripleta
-	 * @param word1 palabra a asignar
+	 * Sets the head (governor) word of the triple.
+	 * @param head word
 	 */
-	public void setWord1(String word1) {
-		this.word1 = word1;
+	public void setHead(String head) {
+		this.head = head;
 	}
 
 	/**
-	 * @return la <i>palabra 2</i> de la tripleta
+	 * Returns the dependent word of the triple.
+	 * @return the dependent word of the triple
 	 */
-	public String getWord2() {
-		return word2;
+	public String getDependent() {
+		return dependent;
 	}
 
 	/**
-	 * Establece la palabra 2 de la tripleta
-	 * @param word2 palabra a asignar
+	 * Sets the dependent word of the triple.
+	 * @param dependent word
 	 */
-	public void setWord2(String word2) {
-		this.word2 = word2;
+	public void setDependent(String dependent) {
+		this.dependent = dependent;
 	}
 	
 	/**
-	 * @return el valor de información mutua calculado para la tripleta
+	 * Returns the number of words between head and dependant.
+	 * @return the number of words between head and dependant
+	 */
+	public int getDistance() {
+		return distance;
+	}
+
+	/**
+	 * Sets the number of words between head and dependant.
+	 * @param dependent number of words
+	 */
+	public void setDistance(int distance) {
+		this.distance = distance;
+	}
+	
+	/**
+	 * Returns the mutual information value of the triple.
+	 * @return the mutual information value of the triple
 	 */
 	public double getMutualInformation() {
 		return mutualInformation;
 	}
 
 	/**
-	 * Establece el valor de información mutua
-	 * @param mutualInformation valor númerico de información mutua
+	 * Sets the mutual information value of the triple.
+	 * @param mutualInformation mutual information value
 	 */
 	public void setMutualInformation(double mutualInformation) {
 		this.mutualInformation = mutualInformation;
@@ -107,8 +136,8 @@ public class Triple implements Serializable {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((dependency == null) ? 0 : dependency.hashCode());
-		result = prime * result + ((word1 == null) ? 0 : word1.hashCode());
-		result = prime * result + ((word2 == null) ? 0 : word2.hashCode());
+		result = prime * result + ((head == null) ? 0 : head.hashCode());
+		result = prime * result + ((dependent == null) ? 0 : dependent.hashCode());
 		return result;
 	}
 
@@ -129,21 +158,21 @@ public class Triple implements Serializable {
 				return false;
 		} else if (!dependency.equals(other.dependency))
 			return false;
-		if (word1 == null) {
-			if (other.word1 != null)
+		if (head == null) {
+			if (other.head != null)
 				return false;
-		} else if (!word1.equals(other.word1))
+		} else if (!head.equals(other.head))
 			return false;
-		if (word2 == null) {
-			if (other.word2 != null)
+		if (dependent == null) {
+			if (other.dependent != null)
 				return false;
-		} else if (!word2.equals(other.word2))
+		} else if (!dependent.equals(other.dependent))
 			return false;
 		return true;
 	}
 
-	/**
-	 * @return the serialversionuid
+	
+	/* (non-Javadoc)
 	 */
 	public static long getSerialversionuid() {
 		return serialVersionUID;
@@ -154,6 +183,6 @@ public class Triple implements Serializable {
 	 */
 	@Override
 	public String toString() {
-		return dependency + "(" + word1 + ", " + word2 + ")";
+		return dependency + "(" + head + ", " + dependent + ")";
 	}
 }

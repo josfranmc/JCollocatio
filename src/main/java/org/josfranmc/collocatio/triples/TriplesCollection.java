@@ -1,142 +1,166 @@
 package org.josfranmc.collocatio.triples;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.josfranmc.collocatio.triples.TripleEvents;
 
 import org.apache.log4j.Logger;
 
 /**
- * Encapsula el tipo de dato que sirve para almacenar la colección de tripletas obtenida. Un objeto de este tipo es devuelto por el método <i>extractTriples()</i>
- * de la clase StanfordTriplesExtractor tras realizar el proceso de extracción de tripletas, el cual es utilizado posteriormente para realizar el cálculo del valor
- * de información mutua de las tripletas que guarda.<p>
- * Los objetos de esta clase se utilizarán concurrentemente por varios hilos de ejecución. Para garantizar la sincronización de los procesos y la
- * integridad de los datos sea un Map del tipo ConcurrentHashMap.
- * <p>El map guarda cada tripleta obtenida junto a un objeto de tipo TripleEvents, el cual guarda el número de veces que se ha encontrado la
- * tripleta y un conjunto con los libros en los que esto ha sucedido.<p>
- * También se guarda un conjunto con todos los tipos de dependencias que se han obtenido.
+ * Encapsulates the data type that is used to store the triples obtained in the extraction process.<p>
+ * The triples are stored on a map whose key is a <code>Triple</code> object that represents a triple.
+ * Each key is associated with a <code>TripleEvents</code> object as value, which acts as a counter that collects the key appearances.<p>
+ * Objects of this class can be used concurrently, since the methods for saving data are thread-safe.
  * @author Jose Francisco Mena Ceca
- * @version 1.0
- * @see Triple * 
+ * @version 2.0
+ * @see Triple
  * @see TripleEvents
+ * @see StanfordTriplesExtractor
  */
 public class TriplesCollection {
 
 	private static final Logger log = Logger.getLogger(TriplesCollection.class);
 	
 	/**
-	 * Colección que guarda las tripletas y donde se han encontrado
+	 * Collection to store the triples and where are found
 	 */
-	private Map<Triple, TripleEvents> triplesCollection;
+	private Map<Triple, TripleEvents> triples;
 	
 	/**
-	 * Conjunto de todos los tipos de dependencias que se han obtenido
+	 * Set with the types of dependency stored in the collection
 	 */
-	private Set<String> dependenciesCollection;
+	private Set<String> dependencies;
 
 	/**
-	 * Contador del número de tripletas obtenidas
+	 * Counter for triples obtained
 	 */
-	private LongAdder totalTriples;
+	private long totalTriples;
+
 
 	/**
-	 * Bloqueo para el control de concurrencia
-	 */
-	private ReentrantLock lock;
-	
-	
-	/**
-	 * Constructor principal. 
+	 * Default constructor. 
 	 */
 	public TriplesCollection() {
-		triplesCollection = new ConcurrentHashMap<Triple, TripleEvents>();
-		dependenciesCollection = ConcurrentHashMap.newKeySet();
-		totalTriples = new LongAdder();
-		lock = new ReentrantLock();
+		triples = new HashMap<>();
+		dependencies = new HashSet<>();
+		totalTriples = 0;
 	}
 	
 	/**
-	 * Guarda una tripleta en la estructura de datos definida para ello junto al libro en el cual ha sido encontrada.<p>
-	 * Si es la primera vez que se guarda la tripleta se asocia a la misma un objeto TripleEvents en el que se recoge el número de veces que
-	 * se ha encontrado la tripleta y en que libros. 
-	 * Si ya existe la tripleta en la colección, se actualiza el objeto TripleEvents añadiendo el nuevo libro en el que ha aparecido la tripleta.
-	 * Esta actualización se lleva a cabo un bloqueo de forma que la operación sea <i>thread-safe</i>
-	 * @param triple tripleta a guardar
-	 * @param book identificador del libro en el que se ha encontrado la tripleta
+	 * Saves a triple along with the name of the file where is located.<p>
+	 * If It is the first time the triple is saved, then a <code>TripleEvents</code> object is associated with the triple. This object
+	 * stores the number of times the triple is located and the names of the files where is located.<br>
+	 * If the triple already exists in the collection, then the <code>TripleEvents</code> object is updated with the new event.
+	 * This operation is <i>thread-safe</i>.
+	 * @param triple triple to add
+	 * @param file the name of the file where the triple is located
+	 * @see Triple
 	 * @see TripleEvents
 	 */
-	public void save(Triple triple, String book) {
-		TripleEvents events = addTripleToCollection(triple, book);
-		if (events != null) {
-			try {
-				lock.lock();
-				events = triplesCollection.get(triple);
-				events.addEvent(book);
-				triplesCollection.put(triple, events);
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-				lock.unlock();
+	public synchronized void save(Triple triple, String file) {
+		if (isValidDependency(triple.getDependency())) {
+			TripleEvents events = triples.putIfAbsent(triple, new TripleEvents(file));
+			if (events != null) {
+				events = triples.get(triple);
+				events.addEvent(file);
+				triples.put(triple, events);
+			} else {
+				dependencies.add(triple.getDependency());
 			}
+			totalTriples++;
 		}
-		dependenciesCollection.add(triple.getDependency());
-		totalTriples.increment();
 	}
 
 	/**
-	 * Añade una nueva tripleta a la colección junto a su ocurrencia (en que libro se ha encontrado)
-	 * @param triple tripleta a guardar
-	 * @param book identificador del libro en el que se ha encontrado la tripleta
-	 * @return null si es la primera vez que se guarda la tripleta, o un objeto TripleEvents que encapsula las veces que ha aparecido la tripleta y en que libros
+	 * Saves a list of triples along with the name of the file where are located.<p>
+	 * For each triple, if it is the first time the triple is saved, then a <code>TripleEvents</code> object is associated with the triple. This object
+	 * stores the number of times the triple is located and the names of the files where is located.<br>
+	 * If the triple already exists in the collection, then the <code>TripleEvents</code> object is updated with the new event.
+	 * This operation is <i>thread-safe</i>.
+	 * @param triple triple to add
+	 * @param file the name of the file where the triple is located
+	 * @see Triple
 	 * @see TripleEvents
 	 */
-	private TripleEvents addTripleToCollection(Triple triple, String book) {		
-		TripleEvents te = new TripleEvents(book);
-		TripleEvents value = triplesCollection.putIfAbsent(triple, te);
+	public synchronized void save(List<Triple> triples, String file) {
+		for (Triple triple : triples) {
+			save(triple, file);
+		}
+	}
+	
+	/**
+	 * Merge with a <code>TriplesCollection</code>.
+	 * @param triplesToAdd object to merge with
+	 */
+	public synchronized void add(TriplesCollection triplesToAdd) {		
+
+		for(Triple key : triplesToAdd.getTriples().keySet()) {
+			TripleEvents eventToAdd = triplesToAdd.getTriples().get(key);
+			TripleEvents actualEvent = this.triples.putIfAbsent(key, eventToAdd);
+			
+			if(actualEvent != null) {
+				actualEvent.addEvent(eventToAdd);
+				this.triples.put(key, actualEvent);
+			} 
+			totalTriples += eventToAdd.getTotalEvents();
+		}
+		this.dependencies.addAll(triplesToAdd.getDependencies());
+	}
+	
+	/**
+	 * To erase dependencies that we don't want. They are garbage, like dependencies about punctuation. 
+	 * @param dependency dependency type
+	 * @return <i>true</i> if it is a dependency to process, <i>false</i> otherwise
+	 */
+	private boolean isValidDependency(String dependency) {
+		boolean value = true;
+		if (dependency.equals("punct") || dependency.toLowerCase().equals("root")) {
+			value = false;
+		}
 		return value;
 	}
 	
 	/**
-	 * Devuelve el número total de tripletas obtenidas
-	 * @return Número de tripletas obtenidas
+	 * Returns the total number of triples in the collection.
+	 * @return the total number of triples in the collection
 	 */
 	public long getTotalTriples() {
-		return this.totalTriples.sum();
+		return this.totalTriples;
 	}
 
 	/**
-	 * @return la colección de todas las tripletas obtenidas
+	 * Returns the collection of triples.
+	 * @return the collection of triples
 	 */
-	public Map<Triple, TripleEvents> getTriplesCollection() {
-		return this.triplesCollection;
+	public Map<Triple, TripleEvents> getTriples() {
+		return this.triples;
 	}
 
 	/**
-	 * Devuelve el conjunto de todos los tipos de dependencias obtenidas
-	 * @return conjunto de dependencias
+	 * Returns the set of dependency types in the collection.
+	 * @return the set of dependency types in the collection
 	 */
-	public Set<String> getDependenciesCollection() {
-		return this.dependenciesCollection;
+	public Set<String> getDependencies() {
+		return this.dependencies;
 	}
 
 	/**
-	 * Para labores de depuración y tests. Muestra en el dispositivo de log el contenido de la colección que almacena las tripletas.
+	 * For debugging. Shows the contain of the collection that store the triples.
 	 */
 	public void show() {
-		for (Map.Entry<Triple, TripleEvents> entry2 : triplesCollection.entrySet()) {
-			Triple key = entry2.getKey();
-			TripleEvents value = entry2.getValue();
+		for (Map.Entry<Triple, TripleEvents> entry : triples.entrySet()) {
+			Triple key = entry.getKey();
+			TripleEvents value = entry.getValue();
 			log.info("------------------------------------------------------");
-		    log.info("dependencia = " + key.getDependency());
-		    log.info("   " + key.getWord1());
-		    log.info("   " + key.getWord2());
+		    log.info("dependency = " + key.getDependency());
+		    log.info("   " + key.getHead() + " " + key.getDistance() + " " + key.getDependent());
 		    log.info("   total = " + value.getTotalEvents());
-		    for (String book : value.getBooks()) {
-		    	log.info(book.toString());
+		    for (String file : value.getFiles()) {
+		    	log.info(file.toString());
 		    }
 		    log.info("------------------------------------------------------");
 		}

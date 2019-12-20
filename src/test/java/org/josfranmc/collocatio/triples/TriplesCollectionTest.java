@@ -11,7 +11,7 @@ import org.junit.Test;
 /**
  * Clase que implementa los test para probar los métodos de la clase TriplesCollection
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  */
 public class TriplesCollectionTest {
 
@@ -21,9 +21,8 @@ public class TriplesCollectionTest {
 	@Test
 	public void testCreateTriplesCollection() {
 		TriplesCollection tc = new TriplesCollection();
-		assertNotNull("Atributo triplesCollection es null", tc.getTriplesCollection());
-		assertNotNull("Atributo dependenciesCollection es null", tc.getDependenciesCollection());
-		assertNotNull("Atributo totalTriples es null", tc.getTotalTriples());
+		assertNotNull("Atributo triplesCollection es null", tc.getTriples());
+		assertNotNull("Atributo dependenciesCollection es null", tc.getDependencies());
 		assertEquals("Atributo totalTriples no es cero", 0, tc.getTotalTriples());
 	}
 	
@@ -33,28 +32,28 @@ public class TriplesCollectionTest {
 	@Test
 	public void testSave() {
 		TriplesCollection tc = new TriplesCollection();
-		tc.save(getTriple1(), "111");
+		tc.save(getTriple1(), "testfile1.txt");
 		
-		Map<Triple, TripleEvents> entry = tc.getTriplesCollection();
+		Map<Triple, TripleEvents> entry = tc.getTriples();
 		TripleEvents t = entry.get(getTriple1());
 
-		assertTrue("Identificador de libro erróneo", t.getBooks().contains("111"));
+		assertTrue("Identificador de libro erróneo", t.getFiles().contains("testfile1.txt"));
 		assertEquals("Valor de totalEvents no es 1", 1, t.getTotalEvents());
 		assertEquals("Atributo totalTriples no es 1", 1, tc.getTotalTriples());
 		
-		tc.save(getTriple2(), "222");
-		entry = tc.getTriplesCollection();
+		tc.save(getTriple2(), "testfile2.txt");
+		entry = tc.getTriples();
 		t = entry.get(getTriple2());
 		
-		assertTrue("Identificador de libro erróneo", t.getBooks().contains("222"));
+		assertTrue("Identificador de libro erróneo", t.getFiles().contains("testfile2.txt"));
 		assertEquals("Valor de totalEvents no es 1", 1, t.getTotalEvents());
 		assertEquals("Atributo totalTriples no es 2", 2, tc.getTotalTriples());		
 		
-		tc.save(getTriple2(), "222");
-		entry = tc.getTriplesCollection();
+		tc.save(getTriple2(), "testfile2.txt");
+		entry = tc.getTriples();
 		t = entry.get(getTriple2());
 		
-		assertTrue("Identificador de libro erróneo", t.getBooks().contains("222"));
+		assertTrue("Identificador de libro erróneo", t.getFiles().contains("testfile2.txt"));
 		assertEquals("Valor de totalEvents no es 2", 2, t.getTotalEvents());
 		assertEquals("Atributo totalTriples no es 3", 3, tc.getTotalTriples());	
 	}
@@ -64,9 +63,9 @@ public class TriplesCollectionTest {
 	 */
 	private Triple getTriple1() {
 		Triple t = new Triple();
-		t.setDependency("nsubj");
-		t.setWord1("la");
-		t.setWord2("prueba");
+		t.setDependency("det");
+		t.setHead("car");
+		t.setDependent("the");
 		return t;
 	}
 	
@@ -75,9 +74,9 @@ public class TriplesCollectionTest {
 	 */
 	private Triple getTriple2() {
 		Triple t = new Triple();
-		t.setDependency("dep");
-		t.setWord1("un");
-		t.setWord2("ejemplo");
+		t.setDependency("nsubj");
+		t.setHead("likes");
+		t.setDependent("car");
 		return t;
 	}
 }

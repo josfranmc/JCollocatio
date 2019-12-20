@@ -1,116 +1,127 @@
 package org.josfranmc.collocatio.triples;
 
-import java.util.List;
-
-import edu.stanford.nlp.ling.HasWord;
-import edu.stanford.nlp.parser.lexparser.LexicalizedParser;
-import edu.stanford.nlp.trees.GrammaticalStructureFactory;
+import edu.stanford.nlp.parser.nndep.DependencyParser;
+import edu.stanford.nlp.tagger.maxent.MaxentTagger;
 
 /**
- * Crea y configura un objeto ParserThread. 
+ * Creates and sets up a <code>ParserThread</code> object. Five properties may be setting:
+ * <ul>
+ * <li>parser model</li>
+ * <li>tagger model</li>
+ * <li><code>TriplesCollection</code> object where to store the triples obtained</li>
+ * <li>file to parser</li>
+ * <li>maximun length of the sentences to parse</li>
+ * </ul>
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  * @see ParserThread
  * @see TriplesCollection
  */
 public class ParserThreadBuilder {
 
-	private LexicalizedParser lp = null;
-	private GrammaticalStructureFactory gsf = null;
-	private List<? extends HasWord> sentence = null;
-	private String book = null;
-
-	private TriplesCollection triplesCollecion = null;
-    
+	private DependencyParser parser; 
+	
+	private MaxentTagger tagger;
 	
 	/**
-	 * Establece el objeto LexicalizedParser a utiizar.
-	 * @param lp objeto LexicalizedParser
-	 * @return referencia al propio objeto builder (this)
-	 * @see LexicalizedParser
-     * @see ParserThreadBuilder
+	 * Reference to the object that stores the triples obtained
 	 */
-    public ParserThreadBuilder setLexicalizedParser(LexicalizedParser lp) {
-        this.lp = lp;
-        return this;
-    }    
+	private TriplesCollection triplesCollecion = null;
+	
+	/**
+	 * Name of the file to process
+	 */
+	private String file;
     
+	/**
+	 * Maximum length of sentences to be processed
+	 */
+	private int maxLenSentence;
+	
+	/**
+	 * Default constructor.
+	 */
+	public ParserThreadBuilder() {
+		
+	}
+	
+	/**
+	 * Sets the tagger model to be used.
+	 * @param tagger the path of the tagger model
+	 * @return a reference to the <code>ParserThreadBuilder</code> object that call this method
+	 */
+    public ParserThreadBuilder setTagger(MaxentTagger tagger) {
+		this.tagger = tagger;
+		return this;
+	}
+
     /**
-     * Establece el objeto TriplesCollection que almacena las tripletas obtenidas.
-     * @param triplesCollection objeto TriplesCollection
+     * Sets the parser model to be used.
+     * @param parser the path of the parser model
+     * @return a reference to the <code>ParserThreadBuilder</code> object that call this method
+     */
+	public ParserThreadBuilder setParser(DependencyParser parser) {
+		this.parser = parser;
+		return this;
+	}
+
+	/**
+	 * Sets the path of the file to parser.
+	 * @param file file path
+	 * @return a reference to the <code>ParserThreadBuilder</code> object that call this method
+	 */
+	public ParserThreadBuilder setFile(String file) {
+        this.file = file;
+        return this;
+    }
+    
+	/**
+	 * Sets the maximum length of the sentences to be processed.
+	 * @param maxLenSentence length of the sentences
+	 * @return a reference to the <code>ParserThreadBuilder</code> object that call this method
+	 */
+	public ParserThreadBuilder setMaxLenSentence(int maxLenSentence) {
+		this.maxLenSentence = maxLenSentence;
+		return this;
+	}
+	
+    /**
+     * Sets the <code>TriplesCollection</code> object that stores the triples obtained.
+     * @param triplesCollection the <code>TriplesCollection</code> object
      * @return referencia al propio objeto builder (this)
      * @see TriplesCollection
-     * @see ParserThreadBuilder
      */
     public ParserThreadBuilder setTriplesCollection(TriplesCollection triplesCollection) {
         this.triplesCollecion = triplesCollection;
         return this;
     }
-    
-    /**
-     * Establece el objeto GrammaticalStructureFactory a utilizar.
-     * @param gsf objeto GrammaticalStructureFactory
-     * @return referencia al propio objeto builder (this)
-     * @see GrammaticalStructureFactory
-     * @see ParserThreadBuilder
-     */
-    public ParserThreadBuilder setGrammaticalStructureFactory(GrammaticalStructureFactory gsf) {
-        this.gsf = gsf;
-        return this;
-    } 
-    
-    /**
-     * Establece la oración a analizar
-     * @param sentence oración a analizar
-     * @return referencia al propio objeto builder (this)
-     * @see ParserThreadBuilder
-     * @see HasWord
-     */
-    public ParserThreadBuilder setSentence(List<? extends HasWord> sentence) {
-        this.sentence = sentence;
-        return this;
-    }
-    
-    /**
-     * Establece el identificador del libro al que pertenece la oración a analizar.
-     * @param book identificador del libro
-     * @return referencia al propio objeto builder (this)
-     * @see ParserThreadBuilder
-     */
-    public ParserThreadBuilder setBook(String book) {
-        this.book = book;
-        return this;
-    }
 
     /**
-     * Crea un objeto ParserThread y lo configura con las opciones que se han tenido que establecer previamente. Todas las opciones de
-     * configuración son obligatorias, por lo que si alguna no ha sido establecida se genera una excepción del tipo IllegalArgumentException.
-     * @return objeto ParserThread
+     * Creates and sets up a <code>ParserThread</code> object with the parameters previously set.<br>
+     * If there is any wrong parameter an <code>IllegalArgumentException</code> exception is thrown.
+     * @return  a <code>ParserThread</code> object correctly configured
      * @see ParserThread
      * @throws IllegalArgumentException
      */
     public ParserThread build() {
-    	if (this.lp == null) {
-            throw new IllegalArgumentException("LexicalizedParser es requerido");
+    	if (parser == null) {
+            throw new IllegalArgumentException("Parser is required");
     	}
-    	if (this.gsf == null) {
-            throw new IllegalArgumentException("GrammaticalStructureFactory es requerido");
+    	if (tagger == null) {
+            throw new IllegalArgumentException("POS tagger is required");
     	}
-    	if (this.sentence == null) {
-            throw new IllegalArgumentException("sentence es requerido");
+    	if (file == null) {
+            throw new IllegalArgumentException("File name is required");
     	}
-    	if (this.book == null) {
-            throw new IllegalArgumentException("Book es requerido");
+    	if (triplesCollecion == null) {
+            throw new IllegalArgumentException("TriplesCollecion is required");
     	}
-    	if (this.triplesCollecion == null) {
-            throw new IllegalArgumentException("TriplesCollecion es requerido");
-    	}
-    	ParserThread pt = new ParserThread();
-    	pt.setLp(this.lp);
-    	pt.setGsf(this.gsf);
-    	pt.setSentence(this.sentence);
-    	pt.setTriplesCollection(this.triplesCollecion);
-    	pt.setBook(this.book);
+    	ParserThread pt = new ParserThread();    	
+    	pt.setParser(parser);
+    	pt.setTagger(tagger);
+    	pt.setFile(file);
+    	pt.setMaxLenSentence(maxLenSentence);
+    	pt.setTriplesCollection(triplesCollecion);
         return pt;
     }
 }
