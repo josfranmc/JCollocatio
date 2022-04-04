@@ -1,18 +1,14 @@
 package org.josfranmc.collocatio.algorithms;
 
 /**
- * Tipos de algoritmos disponibles para la obtención de colocaciones
+ * Types of algorithms available to getting collocations.
  * @author Jose Francisco Mena Ceca
- * @version 1.0
+ * @version 2.0
  */
 public enum AlgorithmType {
-	/**
-	 * Algoritmo para el cálculo del valor de información mutua de tripletas
-	 */
-	MUTUAL_INFORMATION, 
+
+	MUTUAL_INFORMATION,
 	
-	/**
-	 * Ejemplo de otro algoritmo
-	 */
-	ANOTHER_ALGORITHM,
+	FRECUENCY,
+
 }

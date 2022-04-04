@@ -1,18 +1,22 @@
 package org.josfranmc.collocatio.client;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
 import org.apache.log4j.Logger;
-
 import org.josfranmc.collocatio.JCollocatio;
 import org.josfranmc.collocatio.algorithms.AlgorithmType;
-import org.josfranmc.collocatio.algorithms.ParamsAlgorithm;
 import org.josfranmc.collocatio.db.ConnectionFactory;
 import org.josfranmc.collocatio.service.JCollocatioService;
 import org.josfranmc.collocatio.service.domain.Collocatio;
+import org.josfranmc.collocatio.triples.Triple;
+import org.josfranmc.collocatio.triples.TripleData;
+import org.josfranmc.collocatio.triples.TriplesCollection;
 
 /**
  * Clase que permite ejecutar un progrma cliente para realizar la extracción de colocaciones y la consulta de las mismas.
@@ -31,7 +35,7 @@ public class JCollocatioClient {
 	private static JCollocatioService jcs = null;
 	
 	// Parámetros para extracción de colocaciones
-	private static ParamsAlgorithm params = null;
+	//private static ParamsAlgorithm params = null;
 	
 	// Parámetros para consultas
 	private static String queryType = null;
@@ -53,6 +57,42 @@ public class JCollocatioClient {
 	 * @param args lista de argumentos pasados en la invocación del programa
 	 */
 	public static void main(String [] args){
+		double adjustedFrequency = 0;
+		try {
+			adjustedFrequency = Double.parseDouble("2.3");
+		} catch (Exception e) {
+
+		}
+		
+		System.out.println(adjustedFrequency);
+		
+		TriplesCollection tc = new TriplesCollection();
+		Triple triple1 = getTriple1();
+		
+		tc.save(triple1, "testfile1.txt");
+		tc.save(getTriple2(), "testfile2.txt");
+		tc.save(triple1, "testfile2.txt");
+		tc.save(getTriple4(), "testfile2.txt");
+		
+//		Iterator<TripleData> it = tc.iterator();
+//		
+//		while (it.hasNext()) {
+//			TripleData triple = it.next();
+//			System.out.println(triple.getTriple().toString());
+//		}
+
+		Iterator<TripleData> it2 = tc.iterator("nsubj");
+		
+		while (it2.hasNext()) {
+			TripleData triple = it2.next();
+			System.out.println(triple.getTriple().toString());
+		}
+		
+		
+		TripleData triple = it2.next();
+		System.out.println(triple.getTriple().toString());
+
+		
 		jc = new JCollocatio();
 		jcs = new JCollocatioService();
 		showHelp();
@@ -94,59 +134,59 @@ public class JCollocatioClient {
 	private static Tasks readParameters(String [] args) {
 		log.debug("Total parámetros: " + args.length);
 		Tasks task = null;
-		resetParameters();
-		if (args.length == 0 || (args[0].equals("-h") || args[0].equals("-help"))) {
-			task = Tasks.HELP;
-		} else if (args.length == 1 && args[0].equals("exit")) {
-			task = Tasks.EXIT;		
-		} else {
-			if (args[0].equals("-q")) {
-				task = getQueryParameters(args);
-			} else {
-				params = new ParamsAlgorithm();
-				task = Tasks.EXTRACT;
-				for (int i = 0; i < args.length; i+=2) {
-					try {
-						log.debug("argumento " + args[i] + " valor " + args[i+1]);
-						if (args[i].equals("-a")) {
-							params.setAlgorithmType(AlgorithmType.valueOf(args[i+1].toUpperCase()));
-						} else if (args[i].equals("-p")) {
-							params.setTextsPathToProcess(args[i+1]);
-						} else if (args[i].equals("-j")) {
-							params.setAdjustedFrequency(Double.parseDouble(args[i+1]));
-						} else if (args[i].equals("-t")) {
-							params.setTotalThreads(Integer.parseInt(args[i+1]));
-						} else if (args[i].equals("-m")) {
-							params.setModel(args[i+1]);
-						} else if (args[i].equals("-b")) {	
-							params.setSaveInDB(Boolean.parseBoolean(args[i+1]));
-						} else if (args[i].equals("-n")) {
-							params.setNewDataBase(args[i+1]);
-						} else if (args[i].equals("-e")) {
-							params.setNewDataBaseDescription(args[i+1]);
-						} else if (args[i].equals("-f")) {
-							params.setTriplesFilter(Arrays.asList(args[i+1].split(",")));
-						} else if (args[i].equals("-o")) {
-							//TODO
-						} else {
-							System.out.println("Parámetro: " + args[i] + " no reconocido. Ejecute JCollocatioClient -h para listar opciones.");
-							task = Tasks.ERROR;
-							break;
-						}
-					} catch (ArrayIndexOutOfBoundsException a) {
-						task = Tasks.ERROR;
-						System.out.println("Error. Número incorrecto de parámetros");
-						break;
-					} 
-					catch (Exception e) {
-						task = Tasks.ERROR;
-						System.out.println("Error al leer parámetro " + i + ". Parámetro = " + args[i] + ", valor = " + args[i+1]);
-						e.printStackTrace();
-						break;
-					}
-				}
-			}
-		}
+//		resetParameters();
+//		if (args.length == 0 || (args[0].equals("-h") || args[0].equals("-help"))) {
+//			task = Tasks.HELP;
+//		} else if (args.length == 1 && args[0].equals("exit")) {
+//			task = Tasks.EXIT;		
+//		} else {
+//			if (args[0].equals("-q")) {
+//				task = getQueryParameters(args);
+//			} else {
+//				params = new ParamsAlgorithm();
+//				task = Tasks.EXTRACT;
+//				for (int i = 0; i < args.length; i+=2) {
+//					try {
+//						log.debug("argumento " + args[i] + " valor " + args[i+1]);
+//						if (args[i].equals("-a")) {
+//							params.setAlgorithmType(AlgorithmType.valueOf(args[i+1].toUpperCase()));
+//						} else if (args[i].equals("-p")) {
+//							params.setFolderToProcess(args[i+1]);
+//						} else if (args[i].equals("-j")) {
+//							params.setAdjustedFrequency(Double.parseDouble(args[i+1]));
+//						} else if (args[i].equals("-t")) {
+//							params.setTotalThreads(Integer.parseInt(args[i+1]));
+//						} else if (args[i].equals("-m")) {
+//							params.setModel(args[i+1]);
+//						} else if (args[i].equals("-b")) {	
+//							params.setSaveInDB(Boolean.parseBoolean(args[i+1]));
+//						} else if (args[i].equals("-n")) {
+//							params.setNewDataBase(args[i+1]);
+//						} else if (args[i].equals("-e")) {
+//							params.setNewDataBaseDescription(args[i+1]);
+//						} else if (args[i].equals("-f")) {
+//							params.setTriplesFilter(Arrays.asList(args[i+1].split(",")));
+//						} else if (args[i].equals("-o")) {
+//							//TODO
+//						} else {
+//							System.out.println("Parámetro: " + args[i] + " no reconocido. Ejecute JCollocatioClient -h para listar opciones.");
+//							task = Tasks.ERROR;
+//							break;
+//						}
+//					} catch (ArrayIndexOutOfBoundsException a) {
+//						task = Tasks.ERROR;
+//						System.out.println("Error. Número incorrecto de parámetros");
+//						break;
+//					} 
+//					catch (Exception e) {
+//						task = Tasks.ERROR;
+//						System.out.println("Error al leer parámetro " + i + ". Parámetro = " + args[i] + ", valor = " + args[i+1]);
+//						e.printStackTrace();
+//						break;
+//					}
+//				}
+//			}
+//		}
 		return task;
 	}
 
@@ -154,7 +194,7 @@ public class JCollocatioClient {
 	 * Realiza la extracción de colocaciones.
 	 */
 	private static void extractCollocations() {
-		jc.setAlgorithmConfig(params);
+		//jc.setAlgorithmConfig(params);
 		jc.extractCollocations();
 	}
 	
@@ -236,7 +276,7 @@ public class JCollocatioClient {
 	}
 	
 	private static void resetParameters() {
-		params = null;
+		//params = null;
 		queryType = null;
 		queryFilter = null;
 		queryDb = null;
@@ -316,5 +356,32 @@ public class JCollocatioClient {
 			}
 		}*/
 		return task;
+	}
+	
+	private static Triple getTriple1() {
+		Triple t = new Triple();
+		t.setDependency("det");
+		t.setHead("car");
+		t.setDependent("the");
+		return t;
+	}
+	
+	/**
+	 * @return un objeto Triple de prueba
+	 */
+	private static Triple getTriple2() {
+		Triple t = new Triple();
+		t.setDependency("nsubj");
+		t.setHead("likes");
+		t.setDependent("car");
+		return t;
+	}
+	
+	private static Triple getTriple4() {
+		Triple t = new Triple();
+		t.setDependency("det");
+		t.setHead("house");
+		t.setDependent("the");
+		return t;
 	}
 }

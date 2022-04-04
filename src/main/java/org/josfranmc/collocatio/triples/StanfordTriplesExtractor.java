@@ -19,11 +19,11 @@ import edu.stanford.nlp.tagger.maxent.MaxentTagger;
  * Performs the extraction process of triples from a set of files.<p>
  * The process can be set up through parameters in the form of a <code>Properties</code> object. Available properties are:
  * <ul>
- * <li><i>parserModel</i>: parser model to be used, default edu/stanford/nlp/models/parser/nndep/english_UD.gz</li>
- * <li><i>taggerModel</i>: tagger model to be used, default edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger</li>
+ * <li><i>parserModel</i>: parser model to be used, by default edu/stanford/nlp/models/parser/nndep/english_UD.gz</li>
+ * <li><i>taggerModel</i>: tagger model to be used, by default edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger</li>
  * <li><i>textFiles</i>: path to the folder that contains the file to process </li>
- * <li><i>maxLenSentence</i>: maximum length of sentence to parser, default 70</li>
- * <li><i>totalThreads</i>: number of threads to run, default available processors minus one</li>
+ * <li><i>maxLenSentence</i>: maximum length of sentence to parser, by default 70</li>
+ * <li><i>totalThreads</i>: number of threads to run, by default available processors minus one</li>
  * </ul>
  * If any of them is not set the default value is used, except <i>textFiles</i> property that is mandatory to indicate a value.<p>
  * The extraction process is carried out concurrently. For each file to be process a new thread is thrown through a <code>ParserThread</code> object.
@@ -45,7 +45,12 @@ public class StanfordTriplesExtractor {
 	/**
 	 * Configuration parameters
 	 */
-	private Properties properties;
+	private String parserModel;
+	private String taggerModel;
+	private String textFiles;
+	private int maxLenSentence;
+	private int totalThreads;
+	
 	
 	/**
 	 * Default constructor. Sets default parameters:
@@ -74,8 +79,7 @@ public class StanfordTriplesExtractor {
 	 * @param properties parameters
 	 */
 	public StanfordTriplesExtractor(Properties properties) {
-		//this.triplesCollection = new TriplesCollection();
-		this.properties = (Properties) properties.clone();
+		setConfiguration(properties);
 	}
 	
 	/**
@@ -83,35 +87,11 @@ public class StanfordTriplesExtractor {
 	 * @param properties parameters
 	 */
 	public void setConfiguration(Properties properties) {
-		this.properties = properties;
-	}
-	
-	/**
-	 * Returns a list with the paths of the files to be process.
-	 * @return a list with the paths of the files to be process
-	 */
-	private List<String> getFilesToParse() {
-		List<String> filesPath = new ArrayList<>();
-		for (File file : new File(getFilesFolderToParser()).listFiles()) {
-			if (file.isFile()) {
-				filesPath.add(file.getPath());
-			}
-		}
-		return filesPath;
-	}
-
-	/**
-	 * Obtains an <code>ExecutorService</code> object to control the threads to be launched. The threads are configured with some properties.
-	 * @return an <code>ExecutorService</code> object
-	 * @see ThreadFactoryBuilder
-	 */
-	private ExecutorService getExecutorService() {
-		ThreadFactory threadFactory = new ThreadFactoryBuilder()
-				.setNameThread("ParserThread")
-				.setDaemon(false)
-				.setPriority(Thread.MAX_PRIORITY)
-				.build();			
-		return Executors.newFixedThreadPool(getTotalThreads(), threadFactory);
+		this.textFiles = properties.getProperty("textFiles");
+		setParserModel(properties.getProperty("parserModel"));
+		setTaggerModel(properties.getProperty("taggerModel"));
+		setMaxLenSentence(properties.getProperty("maxLenSentence"));
+		setTotalThreads(properties.getProperty("totalThreads"));
 	}
 	
 	/**
@@ -157,7 +137,7 @@ public class StanfordTriplesExtractor {
 			    log.info("Parsing files... ");
 			    List<Future<Integer>> futures = executorService.invokeAll(parsers);
 			    
-				for(Future<Integer> future : futures) {
+				for (Future<Integer> future : futures) {
 					totalSentences += future.get();
 				}
 				
@@ -174,11 +154,38 @@ public class StanfordTriplesExtractor {
 	}
 	
 	/**
-	 * Returns the path to the folder that contains the files to be parse.
 	 * @return the path to the folder that constains the files to be parse
 	 */
 	public String getFilesFolderToParser() {
-		return this.properties.getProperty("textFiles");
+		return this.textFiles;
+	}	
+	
+	/**
+	 * @return the parser model to be used
+	 */
+	public String getParserModel() {
+		return this.parserModel;
+	}
+	
+	/**
+	 * @return the tagger model to be used
+	 */
+	public String getTaggerModel() {
+		return this.taggerModel;
+	}
+	
+	/**
+	 * @return the maximum length of the sentences to be processed
+	 */
+	public int getMaxLenSentence() {
+		return this.maxLenSentence;
+	}
+	
+	/**
+	 * @return the number of threads to be runned
+	 */
+	public int getTotalThreads() {
+		return this.totalThreads;
 	}
 
 	/**
@@ -195,56 +202,36 @@ public class StanfordTriplesExtractor {
 		return true;
 	}
 	
-	/**
-	 * Returns the parser model to be used.
-	 * @return the parser model to be used
-	 */
-	public String getParserModel() {
-		String model = this.properties.getProperty("parserModel");
-		if (model == null || model.isEmpty()) {
-			model = MODEL_PARSER_DEPENDENCIES;
+	private void setParserModel(String parserModel) {
+		if (parserModel == null || parserModel.isEmpty()) {
+			this.parserModel = MODEL_PARSER_DEPENDENCIES;
+		} else {
+			this.parserModel = parserModel;
 		}
-		return model;
 	}
-	
-	/**
-	 * Returns the tagger model to be used.
-	 * @return the tagger model to be used
-	 */
-	public String getTaggerModel() {
-		String model = this.properties.getProperty("taggerModel");
-		if (model == null || model.isEmpty()) {
-			model = MODEL_TAGGER_DEPENDENCIES;
+
+	private void setTaggerModel(String taggerModel) {
+		if (taggerModel == null || taggerModel.isEmpty()) {
+			this.taggerModel = MODEL_TAGGER_DEPENDENCIES;
+		} else {
+			this.taggerModel = taggerModel;
 		}
-		return model;
 	}
-	
-	/**
-	 * Returns the maximum length of the sentences to be processed.<br>
-	 * Default length is 70 words per sentence.
-	 * @return the maximum length of the sentences to be processed
-	 */
-	public int getMaxLenSentence() {
-		int length = 0;
+
+	private void setMaxLenSentence(String maxLenSentence) {
 		try {
-			length = Integer.parseInt(properties.getProperty("maxLenSentence"));
+			this.maxLenSentence = Integer.parseInt(maxLenSentence);
 		} catch (Exception e) {
-			length = StanfordTriplesExtractor.MAX_LEN_SENTENCE;
+			this.maxLenSentence = MAX_LEN_SENTENCE;
 		}
-		return length;
 	}
-	
-	/**
-	 * Returns the number of threads to be runned.<br>
-	 * If the property totalThreads is not specified or is wrong, then the number of available processors minus one will be used.
-	 * @return the number of threads to be runned
-	 */
-	public int getTotalThreads() {
+
+	private void setTotalThreads(String totalThreads) {
 		boolean error = false;
 		int threads = 1;
 		
 		try {
-			threads = Integer.parseInt(properties.getProperty("totalThreads"));
+			threads = Integer.parseInt(totalThreads);
 		} catch (Exception e) {
 			error = true;
 		}
@@ -255,8 +242,35 @@ public class StanfordTriplesExtractor {
 				threads = availableProcessors - 1;
 			}
 		}
-		
-		return threads;
+		this.totalThreads = threads;
+	}	
+	
+	/**
+	 * Returns a list with the paths of the files to be process.
+	 * @return a list with the paths of the files to be process
+	 */
+	private List<String> getFilesToParse() {
+		List<String> filesPath = new ArrayList<>();
+		for (File file : new File(getFilesFolderToParser()).listFiles()) {
+			if (file.isFile()) {
+				filesPath.add(file.getPath());
+			}
+		}
+		return filesPath;
+	}
+
+	/**
+	 * Obtains an <code>ExecutorService</code> object to control the threads to be launched. The threads are configured with some properties.
+	 * @return an <code>ExecutorService</code> object
+	 * @see ThreadFactoryBuilder
+	 */
+	private ExecutorService getExecutorService() {
+		ThreadFactory threadFactory = new ThreadFactoryBuilder()
+				.setNameThread("ParserThread")
+				.setDaemon(false)
+				.setPriority(Thread.MAX_PRIORITY)
+				.build();			
+		return Executors.newFixedThreadPool(getTotalThreads(), threadFactory);
 	}
 	
 	private String getElapsedTime(long init, long end) {

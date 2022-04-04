@@ -21,7 +21,7 @@ public class TripleEvents {
 	/**
 	 *  The number of times a triplet has been found
 	 */
-	private long totalEvents;
+	private long totalEvents = 0;
 
 	
 	/**

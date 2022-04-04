@@ -1,6 +1,7 @@
+//PODEMOS PRESCINDIR DE ESTA CLASE
+
 package org.josfranmc.collocatio.algorithms;
 
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -29,7 +30,8 @@ public abstract class AbstractMutualInformationAlgorithm implements ICollocation
 	@Override
 	public void findCollocations() {
 		log.info("USING MUTUAL INFORMATION ALGORITHM " + getCurrentTime());
-		calculateMutualInformation(extractTriples());
+		TriplesCollection triples = extractTriples();
+		calculateMutualInformation(triples);
 		log.info("END MUTUAL INFORMATION ALGORITHM " + getCurrentTime());
 	}
 	
@@ -45,8 +47,6 @@ public abstract class AbstractMutualInformationAlgorithm implements ICollocation
 	
 	
 	private String getCurrentTime() {
-		Date date = new Date();
-		DateFormat hourFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-		return hourFormat.format(date);
+		return (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss")).format(new Date());
 	}
 }

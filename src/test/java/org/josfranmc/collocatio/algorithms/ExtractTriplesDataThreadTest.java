@@ -43,7 +43,7 @@ public class ExtractTriplesDataThreadTest {
 		tc.save(getTriple2(), "222");
 		tc.save(getTriple2(), "222");
 		
-		ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(tc.getTriplesCollection(), "dep");
+		ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(tc.getTriples(), "dep");
 		try {
 			TriplesData td = etdt.call();
 			assertEquals("Tipo de dependencia debe ser 'dep'", "dep", td.getDependency());
@@ -53,7 +53,7 @@ public class ExtractTriplesDataThreadTest {
 			e.printStackTrace();
 		}
 		
-		etdt = new ExtractTriplesDataThread(tc.getTriplesCollection(), "nsubj");
+		etdt = new ExtractTriplesDataThread(tc.getTriples(), "nsubj");
 		try {
 			TriplesData td = etdt.call();
 			assertEquals("Tipo de dependencia debe ser 'nsubj'", "nsubj", td.getDependency());
@@ -66,7 +66,7 @@ public class ExtractTriplesDataThreadTest {
 		}
 		
 		tc.save(getTriple1(), "111");
-		etdt = new ExtractTriplesDataThread(tc.getTriplesCollection(), "nsubj");
+		etdt = new ExtractTriplesDataThread(tc.getTriples(), "nsubj");
 		try {
 			TriplesData td = etdt.call();
 			assertEquals("Tipo de dependencia debe ser 'nsubj' (2)", "nsubj", td.getDependency());
@@ -76,7 +76,7 @@ public class ExtractTriplesDataThreadTest {
 		}
 		
 		tc.save(getTriple1(), "111");
-		etdt = new ExtractTriplesDataThread(tc.getTriplesCollection(), "nsubj");
+		etdt = new ExtractTriplesDataThread(tc.getTriples(), "nsubj");
 		try {
 			TriplesData td = etdt.call();
 			assertEquals("Tipo de dependencia debe ser 'nsubj' (3)", "nsubj", td.getDependency());
@@ -92,8 +92,8 @@ public class ExtractTriplesDataThreadTest {
 	private Triple getTriple1() {
 		Triple t = new Triple();
 		t.setDependency("nsubj");
-		t.setWord1("la");
-		t.setWord2("prueba");
+		t.setHead("la");
+		t.setDependent("prueba");
 		return t;
 	}
 	
@@ -103,8 +103,8 @@ public class ExtractTriplesDataThreadTest {
 	private Triple getTriple2() {
 		Triple t = new Triple();
 		t.setDependency("dep");
-		t.setWord1("un");
-		t.setWord2("ejemplo");
+		t.setHead("un");
+		t.setDependent("ejemplo");
 		return t;
 	}
 }

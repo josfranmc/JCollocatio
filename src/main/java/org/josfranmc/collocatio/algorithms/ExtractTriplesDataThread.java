@@ -32,21 +32,21 @@ public class ExtractTriplesDataThread implements Callable<TriplesData> {
 	/**
 	 * Colección de tripletas a examinar
 	 */
-	private Map<Triple, TripleEvents> triplesCollection;
+	private Map<Triple, TripleEvents> triples;
 	
 	/**
 	 * Colección de todas las palabras que ocupan la posición 1 en las tripletas del tipo de dependencia indicado por la propiedad dependency
 	 * de la clase.<br>
 	 * Cada palabra se acompaña del número de ocurrencias de la misma
 	 */
-	private Map<String, Long> word1FrecuencyMap;
+	private Map<String, Long> headWordFrecuencyMap;
 	
 	/**
 	 * Colección de todas las palabras que ocupan la posición 2 en las tripletas del tipo de dependencia indicado por la propiedad dependency 
 	 * de la clase.<br>
 	 * Cada palabra se acompaña del número de ocurrencias de la misma
 	 */
-	private Map<String, Long> word2FrecuencyMap;
+	private Map<String, Long> dependentWordFrecuencyMap;
 	
 	/**
 	 * Colección donde se guardan las tripletas analizadas correspondientes al tipo de dependencia indicado por la propiedad dependency de la clase
@@ -71,8 +71,8 @@ public class ExtractTriplesDataThread implements Callable<TriplesData> {
 		setTriplesCollection(map);
 		setDependency(dependency);
 		triplesCollectionByDependency = new HashMap<Triple, TripleEvents>();
-		word1FrecuencyMap = new HashMap<String, Long>();
-		word2FrecuencyMap = new HashMap<String, Long>();
+		headWordFrecuencyMap = new HashMap<String, Long>();
+		dependentWordFrecuencyMap = new HashMap<String, Long>();
 	}
 	
 	/**
@@ -89,11 +89,11 @@ public class ExtractTriplesDataThread implements Callable<TriplesData> {
 	public TriplesData call() throws Exception {
 		log.debug("DEPENDENCIA " + dependency);
 		long totalTriples = 0;
-		for (Entry<Triple, TripleEvents> entry : triplesCollection.entrySet()) {
+		for (Entry<Triple, TripleEvents> mapEntry : triples.entrySet()) {
 			// tripleta a analizar
-			Triple triple = entry.getKey();                
+			Triple triple = mapEntry.getKey();                
 			if (triple.getDependency().equals(this.dependency)) {
-				TripleEvents events = entry.getValue();
+				TripleEvents events = mapEntry.getValue();
 				// total de ocurrencias de esta tripleta
 				Long totalTriple = events.getTotalEvents();
 				// actualizamos el total de tripletas del tipo de dependencia buscado
@@ -105,22 +105,22 @@ public class ExtractTriplesDataThread implements Callable<TriplesData> {
 				}
 				
 				Long val = 0L;
-				// guardamos la palabra 1 de la tripleta junto a su número de ocurrencias
-				String word1 = triple.getWord1();
-				val = word1FrecuencyMap.putIfAbsent(word1, totalTriple);
+				// guardamos la palabra head de la tripleta junto a su número de ocurrencias
+				String headWord = triple.getHead();
+				val = headWordFrecuencyMap.putIfAbsent(headWord, totalTriple);
 				if (val != null) {
 					// si ya estaba guardada actualizamos el número de ocurrencias de la misma
 					val += totalTriple;
-					word1FrecuencyMap.put(word1, val);
+					headWordFrecuencyMap.put(headWord, val);
 				}
 				
-				// guardamos la palabra 2 de la tripleta junto a su número de ocurrencias
-				String word2 = triple.getWord2();
-				val = word2FrecuencyMap.putIfAbsent(word2, totalTriple);
+				// guardamos la palabra dependent de la tripleta junto a su número de ocurrencias
+				String dependentWord = triple.getDependent();
+				val = dependentWordFrecuencyMap.putIfAbsent(dependentWord, totalTriple);
 				if (val != null) {
 					// si ya estaba guardada actualizamos el número de ocurrencias de la misma
 					val += totalTriple;
-					word2FrecuencyMap.put(word2, val);
+					dependentWordFrecuencyMap.put(dependentWord, val);
 				}
 			}
 		}
@@ -128,8 +128,8 @@ public class ExtractTriplesDataThread implements Callable<TriplesData> {
 		TriplesData data = new TriplesData(dependency);
 		data.setTriplesMap(triplesCollectionByDependency);
 		data.setTotalTriplesByDependency(totalTriples);
-		data.setWord1FrecuencyMap(word1FrecuencyMap);
-		data.setWord2FrecuencyMap(word2FrecuencyMap);
+		data.setWord1FrecuencyMap(headWordFrecuencyMap);
+		data.setWord2FrecuencyMap(dependentWordFrecuencyMap);
 
 		return data;
 	}
@@ -140,7 +140,7 @@ public class ExtractTriplesDataThread implements Callable<TriplesData> {
 	 * @see TripleEvents
 	 */
 	public void setTriplesCollection(Map<Triple, TripleEvents> map) {
-		this.triplesCollection = map;
+		this.triples = map;
 	}
 
 	/**

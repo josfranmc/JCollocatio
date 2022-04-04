@@ -8,7 +8,7 @@
   <packaging>jar</packaging>
 
   <name>JCollocatio</name>
-  <description>Permite ejecutar algoritmos para extraer colocaciones de un conjunto de textos</description>    
+  <description>This software allows you to run algorithms in order to extract collocations from a set of files.</description>    
   <url>https://github.com/josfranmc/JCollocatio</url>
   <licenses>
     <license>
@@ -78,77 +78,82 @@
   </dependencies>
 
   <build>
-      <finalName>${project.artifactId}-${project.version}</finalName>
-      <plugins>
-          <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-compiler-plugin</artifactId>
-              <version>3.6.1</version>
-              <configuration>
-                  <source>${jdk.source.version}</source>
-                  <target>${jdk.target.version}</target>
-                  <failOnMissingWebXml>false</failOnMissingWebXml>
-              </configuration>
-          </plugin>
-           
-          <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-jar-plugin</artifactId>
-              <version>3.2.0</version>
-              <configuration>
-                  <archive>
-                      <manifest>
-                          <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                          <addClasspath>true</addClasspath>
-                          <classpathPrefix>lib/</classpathPrefix>
-                          <mainClass>${main.class}</mainClass>
-                      </manifest>
-                      <manifestEntries>
-                          <url>${project.url}</url>
-                      </manifestEntries>
-                  </archive>     
-              </configuration>
-          </plugin>   
+    <finalName>${project.artifactId}-${project.version}</finalName>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.6.1</version>
+            <configuration>
+                <source>${jdk.source.version}</source>
+                <target>${jdk.target.version}</target>
+                <failOnMissingWebXml>false</failOnMissingWebXml>
+            </configuration>
+        </plugin>
+          
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.2.0</version>
+            <configuration>
+                <archive>
+                    <manifest>
+                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        <addClasspath>true</addClasspath>
+                        <classpathPrefix>lib/</classpathPrefix>
+                        <mainClass>${main.class}</mainClass>
+                    </manifest>
+                    <manifestEntries>
+                        <url>${project.url}</url>
+                    </manifestEntries>
+                </archive>     
+            </configuration>
+        </plugin>   
 			
-		  <plugin>
-		      <groupId>org.apache.maven.plugins</groupId>
-		      <artifactId>maven-dependency-plugin</artifactId>
-              <executions>
-                  <execution>
-		              <id>copy</id>
-		              <phase>install</phase>
-		              <goals>
-		                  <goal>copy-dependencies</goal>
-		              </goals>
-		              <configuration>
-		                  <outputDirectory>${project.build.directory}/lib</outputDirectory>
-		                  <excludeArtifactIds>junit,hamcrest-core,stanford-parser</excludeArtifactIds>
-		              </configuration>
-		          </execution>
-              </executions>
-		  </plugin>			   		
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+		    <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+                <execution>
+		            <id>copy</id>
+		            <phase>install</phase>
+		            <goals>
+		                <goal>copy-dependencies</goal>
+		            </goals>
+		            <configuration>
+		                <outputDirectory>${project.build.directory}/lib</outputDirectory>
+		                <excludeArtifactIds>junit,hamcrest-core,stanford-parser</excludeArtifactIds>
+		            </configuration>
+		        </execution>
+            </executions>
+        </plugin>			   		
 
-          <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-shade-plugin</artifactId>
-              <version>3.2.1</version>
-              <executions>
-                  <execution>
-                      <phase>package</phase>
-                      <goals>
-                          <goal>shade</goal>
-                      </goals>
-                      <configuration>
-                          <shadedArtifactAttached>true</shadedArtifactAttached>
-                          <transformers>
-                              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                  <mainClass>${main.class}</mainClass>
-                              </transformer>
-                          </transformers>
-                      </configuration>
-                  </execution>
-              </executions>
-          </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>3.2.1</version>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                    <configuration>
+                        <artifactSet>
+                            <excludes>
+                                <exclude>edu.stanford.nlp:stanford-parser:*</exclude>
+                            </excludes>
+                        </artifactSet>
+                        <shadedArtifactAttached>true</shadedArtifactAttached>
+                        <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <mainClass>${main.class}</mainClass>
+                            </transformer>
+                        </transformers>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
       </plugins>     
   </build>  
 </project>

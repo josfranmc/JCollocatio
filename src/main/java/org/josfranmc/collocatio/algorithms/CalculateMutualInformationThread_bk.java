@@ -7,17 +7,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 import org.josfranmc.collocatio.triples.Triple;
-import org.josfranmc.collocatio.triples.TripleData;
 import org.josfranmc.collocatio.triples.TripleEvents;
-import org.josfranmc.collocatio.triples.TriplesCollection;
 
 import com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException;
 import com.mysql.cj.jdbc.exceptions.MysqlDataTruncation;
@@ -31,33 +26,16 @@ import com.mysql.cj.jdbc.exceptions.MysqlDataTruncation;
  * @version 1.0
  * @see TriplesData
  */
-public class CalculateMutualInformationThread implements Callable<List<Collocation>> {
+public class CalculateMutualInformationThread_bk implements Runnable {
 
-	private final static Logger log = Logger.getLogger(CalculateMutualInformationThread.class);
+	private final static Logger log = Logger.getLogger(CalculateMutualInformationThread_bk.class);
 	
 	private final static long INSERTS_LIMIT = 5000;
 
 	/**
 	 * Datos sobre los que realizar los cálculos para obtener el valor de información mutua
 	 */
-	private TriplesData tripleData;
-	
-	private Triple triple;
-	
-	private TripleEvents events;
-	
-	private long totalHeadWord;
-	
-	private long totalDependentWord;
-	
-	private double adjustedFrequency;
-	
-	private long totalDependencies;
-	
-	private TriplesCollection triplesCollection;
-	
-	private String dependency;
-	
+	private TriplesData data;
 	
 	/**
 	 * Conexión a la base de datos en la que guardar los datos calculados
@@ -79,10 +57,6 @@ public class CalculateMutualInformationThread implements Callable<List<Collocati
 	 */
 	private long insertsCount;
 
-	
-	CalculateMutualInformationThread() {
-		
-	}
 
 	/**
 	 * Constructor principal. 
@@ -90,14 +64,8 @@ public class CalculateMutualInformationThread implements Callable<List<Collocati
 	 * @param totalTriples número total de tripletas que se han obtenido (todas las tripletas de todos los tipos de dependencia posibles)
 	 * @see TriplesData
 	 */
-	CalculateMutualInformationThread(TripleData data, double adjustedFrequency, long totalDependencies, Connection connection) {
-		this.triple = data.getTriple();
-		this.events = data.getEvents();
-		this.totalHeadWord = data.getTotalHeadWord();
-		this.totalDependentWord = data.getTotalDependentWord();
-		this.adjustedFrequency = adjustedFrequency;
-		this.totalDependencies = totalDependencies;
-		
+	CalculateMutualInformationThread_bk(TriplesData data, Connection connection) {
+		this.data = data;
 		this.connection = connection;
 		this.insertsCount = 0;
 		this.insertsTotal = 0;
@@ -136,13 +104,13 @@ public class CalculateMutualInformationThread implements Callable<List<Collocati
 	 * por tripletas pertenecientes a un tipo concreto de dependencia. 
 	 */
 	@Override
-	public List<Collocation> call() {
-		//Triple triple = null;
-		long totalTriples = triplesCollection.getTotalTriples();                         // total de tripletas obtenidas (todas)
-		long totalTriplesByDependency = triplesCollection.getTotalTriplesByDependency(dependency); // total de tripletas de un determinado tipo de dependencia
+	public void run() {
+		Triple triple = null;
+		long totalTriples = data.getTotalTriples();                         // total de tripletas obtenidas (todas)
+		long totalTriplesByDependency = data.getTotalTriplesByDependency(); // total de tripletas de un determinado tipo de dependencia
 		long totalTriple = 0;                                               // total de ocurrencias de una tripleta concreta
-		long totalTriplesByDependencyAndHeadWord = 0;                          // total de ocurrencias de la palabra 1 de un tripleta de un tipo de dependencia concreto
-		long totalTriplesByDependencyAndDependentWord = 0;                          // total de ocurrencias de la palabra 2 de un tripleta de un tipo de dependencia concreto
+		long totalTriplesByDependencyAndWord1 = 0;                          // total de ocurrencias de la palabra 1 de un tripleta de un tipo de dependencia concreto
+		long totalTriplesByDependencyAndWord2 = 0;                          // total de ocurrencias de la palabra 2 de un tripleta de un tipo de dependencia concreto
 		
 		double P_A_B_C = 0;                           
 		double P_B = 0;
@@ -150,90 +118,65 @@ public class CalculateMutualInformationThread implements Callable<List<Collocati
 		double P_C_given_A = 0;
 		double mutualInformation = 0;
 
-		Iterator<TripleData> it = triplesCollection.iterator(dependency);
-		while (it.hasNext()) {
-			try {
-				TripleData tripleData = it.next();
-				totalTriple = tripleData.getEvents().getTotalEvents();
-				totalTriplesByDependencyAndHeadWord = tripleData.getTotalHeadWord();
-				totalTriplesByDependencyAndDependentWord = tripleData.getTotalDependentWord();
-				
+		PreparedStatement pstatement = getPreparedStatementToCollocations();
+
+		try {
+			log.info("Inicio hilo para dependencia " + data.getDependency());
+			for (Entry<Triple, TripleEvents> entry : data.getTriplesMap().entrySet()) {
 				P_A_B_C = P_B = P_A_given_B = P_C_given_A = mutualInformation = 0;
 				
+				// tripleta sobre la que calcular su valor de inforamción mutua
+				triple = entry.getKey();    
+				// ocurrencias de la tripleta
+				TripleEvents events = entry.getValue();
+				// total de ocurrencias de esta tripleta
+				totalTriple = events.getTotalEvents();  
+				
+				// número de ocurrencias de la palabra 1 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
+				String word1 = triple.getHead();
+				totalTriplesByDependencyAndWord1 = data.getWord1FrecuencyMap().get(word1);
+				// número de ocurrencias de la palabra 2 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
+				String word2 = triple.getDependent();
+				totalTriplesByDependencyAndWord2 = data.getWord2FrecuencyMap().get(word2);
+
 				P_A_B_C = (double) totalTriple / (double) totalTriples;	                                      
-				P_A_B_C = P_A_B_C - this.adjustedFrequency;                                                     
+				P_A_B_C = P_A_B_C - data.getAdjustedFrequency();                                                     
 				P_B =  (double) totalTriplesByDependency / (double) totalTriples;	                          
-				P_A_given_B = (double) totalTriplesByDependencyAndHeadWord / (double) totalTriplesByDependency;
-				P_C_given_A = (double) totalTriplesByDependencyAndDependentWord / (double) totalTriplesByDependency;
+				P_A_given_B = (double) totalTriplesByDependencyAndWord1 / (double) totalTriplesByDependency;
+				P_C_given_A = (double) totalTriplesByDependencyAndWord2 / (double) totalTriplesByDependency;
 	
 				mutualInformation = getLogBase2(P_A_B_C / (P_B * P_A_given_B * P_C_given_A));
 				mutualInformation = new BigDecimal(mutualInformation).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
-			} catch (Exception e) {
+				triple.setMutualInformation(mutualInformation);
 				
+				if (isSaveDB()) {
+					long generatedId = saveCollocation(triple, pstatement);
+					if (generatedId > 0) {
+						try {
+							saveBooks(events.getFiles(), generatedId);
+						} catch (Exception e) {
+							log.error("No se han podido guardar libros para tripleta " + triple.toString());
+							log.error(e);
+						}
+					}
+					incrementInsertsCount();
+					if (getInsertsCount() == INSERTS_LIMIT) {
+						doCommit();
+						resetInsertsCount();
+					}
+				}	
 			}
+		} finally {
+			closePreparedStatement(pstatement);
+			closeConnection();
+			log.info("Fin hilo dependencia " + data.getDependency() + ", inserciones " + this.insertsTotal);
+			this.data.getTriplesMap().clear();
+			this.data.getWord1FrecuencyMap().clear();
+			this.data.getWord2FrecuencyMap().clear();
+			this.data = null;
 		}
-		
-		PreparedStatement pstatement = getPreparedStatementToCollocations();
-
-//		try {
-//			log.info("Inicio hilo para dependencia " + data.getDependency());
-//			for (Entry<Triple, TripleEvents> entry : data.getTriplesMap().entrySet()) {
-//				P_A_B_C = P_B = P_A_given_B = P_C_given_A = mutualInformation = 0;
-//				
-//				// tripleta sobre la que calcular su valor de inforamción mutua
-//				triple = entry.getKey();    
-//				// ocurrencias de la tripleta
-//				TripleEvents events = entry.getValue();
-//				// total de ocurrencias de esta tripleta
-//				totalTriple = events.getTotalEvents();  
-//				
-//				// número de ocurrencias de la palabra 1 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
-//				String word1 = triple.getHead();
-//				totalTriplesByDependencyAndWord1 = data.getWord1FrecuencyMap().get(word1);
-//				// número de ocurrencias de la palabra 2 en el conjunto de las tripletas del tipo de dependencia que se está analizando 
-//				String word2 = triple.getDependent();
-//				totalTriplesByDependencyAndWord2 = data.getWord2FrecuencyMap().get(word2);
-//
-//				P_A_B_C = (double) totalTriple / (double) totalTriples;	                                      
-//				P_A_B_C = P_A_B_C - data.getAdjustedFrequency();                                                     
-//				P_B =  (double) totalTriplesByDependency / (double) totalTriples;	                          
-//				P_A_given_B = (double) totalTriplesByDependencyAndWord1 / (double) totalTriplesByDependency;
-//				P_C_given_A = (double) totalTriplesByDependencyAndWord2 / (double) totalTriplesByDependency;
-//	
-//				mutualInformation = getLogBase2(P_A_B_C / (P_B * P_A_given_B * P_C_given_A));
-//				mutualInformation = new BigDecimal(mutualInformation).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
-//				triple.setMutualInformation(mutualInformation);
-//				
-//				if (isSaveDB()) {
-//					long generatedId = saveCollocation(triple, pstatement);
-//					if (generatedId > 0) {
-//						try {
-//							saveBooks(events.getFiles(), generatedId);
-//						} catch (Exception e) {
-//							log.error("No se han podido guardar libros para tripleta " + triple.toString());
-//							log.error(e);
-//						}
-//					}
-//					incrementInsertsCount();
-//					if (getInsertsCount() == INSERTS_LIMIT) {
-//						doCommit();
-//						resetInsertsCount();
-//					}
-//				}	
-//			}
-//		} finally {
-//			closePreparedStatement(pstatement);
-//			closeConnection();
-//			log.info("Fin hilo dependencia " + data.getDependency() + ", inserciones " + this.insertsTotal);
-//			this.data.getTriplesMap().clear();
-//			this.data.getWord1FrecuencyMap().clear();
-//			this.data.getWord2FrecuencyMap().clear();
-//			this.data = null;
-//		}
-		return null;
 	}
-	
-	
+
 	/**
 	 * Calcula el logaritmo en base de dos de un número.<p>
 	 * Si el número pasado es cero o negativo se devuelve el valor cero.
@@ -398,38 +341,5 @@ public class CalculateMutualInformationThread implements Callable<List<Collocati
 	 */
 	public boolean isSaveDB() {
 		return saveDB;
-	}
-	
-	
-    public void setTriple(Triple triple) {
-		this.triple = triple;
-	}
-
-	public void setEvents(TripleEvents events) {
-		this.events = events;
-	}
-
-	public void setTotalHeadWord(long totalHeadWord) {
-		this.totalHeadWord = totalHeadWord;
-	}
-
-	public void setTotalDependentWord(long totalDependentWord) {
-		this.totalDependentWord = totalDependentWord;
-	}
-
-	public void setAdjustedFrequency(double adjustedFrequency) {
-		this.adjustedFrequency = adjustedFrequency;
-	}
-
-	public void setTotalDependencies(long totalDependencies) {
-		this.totalDependencies = totalDependencies;
-	}
-
-	public void setDependency(String dependency) {
-		this.dependency = dependency;
-	}
-	
-	public void setTriplesCollection(TriplesCollection triplesCollection) {
-		this.triplesCollection = triplesCollection;
 	}
 }

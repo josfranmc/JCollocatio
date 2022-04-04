@@ -12,9 +12,12 @@ import edu.stanford.nlp.io.IOUtils;
 /**
  * Creates and sets up an object that allows you to execute an algorithm in order to search collocations.<br>
  * This objects implements the <code>ICollocationAlgorithm</code> interface.
+ * 
+ * MutualInformationAlgorithm 
  * @author Jose Francisco Mena Ceca
  * @version 2.0
  * @see ICollocationAlgorithm
+ * @see MutualInformationAlgorithm
  */
 public class CollocationAlgorithmBuilder {
 
@@ -81,7 +84,7 @@ public class CollocationAlgorithmBuilder {
 			throw new IllegalArgumentException("Path to files to be process has not been established");
 		}
 
-		checkTotalThreads();
+		
 		
 		//properties.setProperty("saveInDb", Boolean.valueOf(properties.getProperty("saveInDb")));
 
@@ -103,6 +106,8 @@ public class CollocationAlgorithmBuilder {
 	 */
 	private MutualInformationAlgorithm getMutualInformationAlgorithm() {
 	
+		checkTotalThreads();
+		
 		MutualInformationAlgorithm mia = new MutualInformationAlgorithm();
 		mia.setConfiguration(this.properties);
 

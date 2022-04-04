@@ -80,6 +80,7 @@ class ParserThread implements Callable<Integer> {
 	            		triples.add(triple);
 	            	}
 	            }
+	        	
 	        	totalSentences++;
 	    	}
         }

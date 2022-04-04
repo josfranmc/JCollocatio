@@ -3,11 +3,15 @@ package org.josfranmc.collocatio.algorithms;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -20,6 +24,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.josfranmc.collocatio.db.ConnectionFactory;
 import org.josfranmc.collocatio.triples.StanfordTriplesExtractor;
+import org.josfranmc.collocatio.triples.Triple;
+import org.josfranmc.collocatio.triples.TripleData;
+import org.josfranmc.collocatio.triples.TripleEvents;
 import org.josfranmc.collocatio.triples.TriplesCollection;
 import org.josfranmc.collocatio.util.ThreadFactoryBuilder;
 
@@ -32,18 +39,19 @@ import org.josfranmc.collocatio.util.ThreadFactoryBuilder;
  * </li>
  * <li>Second, calculate the mutual information value for each triple in the <code>TriplesCollection</code> object.
  * </ul>
+ * You must use the <code>CollocationAlgorithmBuilder</code> class in order to create a <code>MutualInformationAlgorithm</code> object.
  * @author Jose Francisco Mena Ceca
  * @version 2.0
- * @see AbstractMutualInformationAlgorithm
+ * @see CollocationAlgorithmBuilder
  * @see StanfordTriplesExtractor
  * @see TriplesCollection
  */
-public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorithm {
+public class MutualInformationAlgorithm implements ICollocationAlgorithm { //extends AbstractMutualInformationAlgorithm {
 
 	private static final Logger log = Logger.getLogger(MutualInformationAlgorithm.class);
 	
 	/**
-	 * Types of dependencies to consider in the calculation (null all the dependencies are considered)
+	 * Types of dependencies to consider in the calculation (if null, all the dependencies are considered)
 	 */
 	private List<String> triplesFilter = null;
 	
@@ -63,19 +71,21 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	/**
 	 * Setting parameters
 	 */
-	private Properties properties;
+	//private Properties properties;
+	
+	private int totalThreads;
+	private double adjustedFrequency;
 	
 	/**
 	 * To extract dependencies
 	 */
-	private StanfordTriplesExtractor extractor;
+	private StanfordTriplesExtractor triplesExtractor;
 	
 	/**
 	 * Default constructor.
 	 */
 	MutualInformationAlgorithm() {
-		properties = new Properties();
-		extractor = new StanfordTriplesExtractor();
+		
 	}
 	
 	/**
@@ -83,27 +93,37 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 * @param properties parameters 
 	 */
 	public void setConfiguration(Properties properties) {
-		this.properties = (Properties) properties.clone();
-		this.extractor.setConfiguration(this.properties);
+		this.triplesExtractor = new StanfordTriplesExtractor();
+		this.triplesExtractor.setConfiguration(properties);
+		
+		setAdjustedFrequency(properties.getProperty("adjustedFrequency"));
 	}
 	
 	/**
-	 * Implements the triples extraction process.<p>
-	 * This process is executed through a <code>StanfordTriplesExtractor</code> object. As result, a <code>TriplesCollection</code> object with all the triples is obtained.
-	 * @see StanfordTriplesExtractor
-	 * @see TriplesCollection
+	 * Runs the algorithm
 	 */
 	@Override
-	protected TriplesCollection extractTriples() {
-		return extractor.extractTriples();
+	public void findCollocations() {
+		if (this.triplesExtractor != null) {
+			log.info("USING MUTUAL INFORMATION ALGORITHM " + getCurrentTime());
+			TriplesCollection triples = triplesExtractor.extractTriples();
+			calculateMutualInformation(triples);
+			log.info("END MUTUAL INFORMATION ALGORITHM " + getCurrentTime());
+		} else {
+			log.info("MUTUAL INFORMATION ALGORITHM NO SETTING" + getCurrentTime());
+		}
 	}
 
+	// ¿SON NECESARIOS ESTOS GETS?
+	
+	// hacer un get que devuelva el objeto Properties y ya está
+	
 	/**
 	 * Returns the parser model to be used.
 	 * @return the parser model to be used
 	 */
 	public String getParserModel() {
-		return extractor.getParserModel();
+		return triplesExtractor.getParserModel();
 	}
 	
 	/**
@@ -111,14 +131,15 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 * @return the tagger model to be used
 	 */
 	public String getTaggerModel() {
-		return extractor.getTaggerModel();
+		return triplesExtractor.getTaggerModel();
 	}
+	
 	/**
 	 * Returns the path to the folder that contains the files to be parse.
 	 * @return the path to the folder that contains the files to be parse
 	 */
 	public String getFilesFolderToParser() {
-		return properties.getProperty("textFiles");
+		return triplesExtractor.getFilesFolderToParser();
 	}
 	
 	/**
@@ -126,9 +147,8 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 * @return  the number of threads to be runned
 	 */
 	public int getTotalThreads() {
-		return extractor.getTotalThreads();
+		return this.totalThreads;
 	}
-	
 
 	/**
 	 *  Implementa el proceso de cálculo del valor "información mutua" de las tripletas obtenidas previamente. El cálculo se hace de forma
@@ -141,63 +161,95 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 *  encargado de realizar los cálculos del valor de información mutua, siendo ejecutados de forma paralela</li>
 	 *  </ul>
 	 */
-	@SuppressWarnings("null")
-	@Override
+	//@SuppressWarnings("null")
+	//@Override
 	protected void calculateMutualInformation(TriplesCollection triplesCollection) {
 		if (triplesCollection.getTotalTriples() > 0) {
-			log.info("Inicio cálculo información mutua " + getCurrentTime());
+			log.info("Calculate mutual information value " + getCurrentTime());
 			log.info("Guardar en base de datos: " + this.isSaveInDB());
 			if (prepareDataBase()) {
 				int totalThreads = 0;
-				final long totalTriples = triplesCollection.getTotalTriples();
-				ExecutorService executorServiceFreq = null;
-				ExecutorService executorServiceCal = null;
+				//final long totalTriples = triplesCollection.getTotalTriples();
+				//ExecutorService executorServiceFreq = null;
+				//ExecutorService executorService = null;
 				try {
-
-					executorServiceFreq = Executors.newFixedThreadPool(getTotalThreads(), getThreadFactory("FregThread"));
-					final ExecutorCompletionService<TriplesData> completionService = new ExecutorCompletionService<>(executorServiceFreq);
-					log.info("Calculando datos de frecuencia...");
-					for (String dependency : triplesCollection.getDependencies()) {
-						if (isSelectedDependency(dependency)) {
-							ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(triplesCollection.getTriples(), dependency);
-							completionService.submit(etdt);
-							totalThreads++;
-						}
-					}
-					executorServiceFreq.shutdown();
-					triplesCollection = null;
+//					final ExecutorService executorServiceFreq = getExecutorService("FreqThread");
+//					//final ExecutorCompletionService<TriplesData> completionService = new ExecutorCompletionService<>(executorServiceFreq);
+//					
+//					log.info("Calculating frequency data...");
+//					List<ExtractTriplesDataThread> extracter = new ArrayList<>();
+//					
+//					for (String dependency : triplesCollection.getDependencies()) {
+//						if (isSelectedDependency(dependency)) {
+//							ExtractTriplesDataThread etdt = new ExtractTriplesDataThread(triplesCollection.getTriples(), dependency);
+//							//completionService.submit(etdt);
+//							extracter.add(etdt);
+//							totalThreads++;
+//						}
+//					}
+//					
+//					List<Future<TriplesData>> futures = executorServiceFreq.invokeAll(extracter);
+//					
+//					executorServiceFreq.shutdown();
+//					triplesCollection = null;
 					
-					log.info("Calculando valor de información mutua para tripletas...");
-					executorServiceCal = Executors.newFixedThreadPool(getTotalThreads(), getThreadFactory("CalThread"));
-					for(int i = 0; i < totalThreads; i++) {
-					    final Future<TriplesData> resultTask = completionService.take();
-					    TriplesData data = null;
-					    try {
-					    	data = resultTask.get();
-					    	data.setTotalTriples(totalTriples);
-					    	data.setAdjustedFrequency(getAdjustedFrequency());
-					    	
-					    	log.info("Dependencia " + data.getDependency() + ": colocaciones " + data.getTotalElementsMap() + ", elementos a procesar " + data.getTotalTriplesByDependency());
-					    	
-					        CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(data, getConnection(false));
-					        executorServiceCal.execute(cmit);
-					    } catch (RejectedExecutionException e) {     
-					    	log.error("Tarea no aceptada para procesar datos de dependencia " + data.getDependency());
-					    } catch (ExecutionException e) {
-					        log.error("Incidencia " + e.getCause() + " al procesar datos dependencia " + data.getDependency());
-					    } catch (InterruptedException ie) { 
-					        log.error("Fin anómalo de hilo "  + " al procesar datos dependencia " + data.getDependency());
-					        ie.printStackTrace();
-					    }
+					log.info("Calculating mutual information value for triples...");
+					final ExecutorService executorService = getExecutorService("CalculateThread");
+					List<Future<List<Collocation>>> collocationsFuture = new ArrayList<>();
+					
+					Set<String> dependencies = triplesCollection.getDependencies();
+					
+					for (String dependency : dependencies) {
+					
+						//Iterator<TripleData> it = triplesCollection.iterator(dependency);
+						//while (it.hasNext()) {
+							//TripleData tripleData = it.next();
+							CalculateMutualInformationThread cmit = new CalculateMutualInformationThreadBuilder()
+									.setTriplesCollection(triplesCollection)
+									.setDependency(dependency)
+									//.setTripleData(tripleData)
+									//.setTotalDependencies(triplesCollection.getTotalTriples())
+									.setAdjustedFrequency(getAdjustedFrequency())
+									.build();
+							//CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(tripleData, getAdjustedFrequency(), triplesCollection.getTotalTriples(), getConnection(false));
+							Future<List<Collocation>> future = executorService.submit(cmit);
+							collocationsFuture.add(future);
+						//}
+					
 					}
 					
-					executorServiceFreq.shutdown();
-					executorServiceFreq = null;
-				    awaitTerminationAfterShutdown(executorServiceCal);
+					triplesCollection = null; 
+					
+					for (Future<List<Collocation>> future : collocationsFuture) {
+					//for(int i = 0; i < totalThreads; i++) {
+						List<Collocation> collocation = future.get();
+//					    TriplesData data = null;
+//					    try {
+//					    	data = resultTask.get();
+//					    	data.setTotalTriples(totalTriples);
+//					    	data.setAdjustedFrequency(getAdjustedFrequency());
+//					    	
+//					    	log.info("Dependencia " + data.getDependency() + ": colocaciones " + data.getTotalElementsMap() + ", elementos a procesar " + data.getTotalTriplesByDependency());
+//					    	
+//					        CalculateMutualInformationThread cmit = new CalculateMutualInformationThread(data, getConnection(false));
+//					        executorServiceCal.execute(cmit);
+//					    } catch (RejectedExecutionException e) {     
+//					    	log.error("Tarea no aceptada para procesar datos de dependencia " + data.getDependency());
+//					    } catch (ExecutionException e) {
+//					        log.error("Incidencia " + e.getCause() + " al procesar datos dependencia " + data.getDependency());
+//					    } catch (InterruptedException ie) { 
+//					        log.error("Fin anómalo de hilo "  + " al procesar datos dependencia " + data.getDependency());
+//					        ie.printStackTrace();
+//					    }
+					}
+					
+//					executorServiceFreq.shutdown();
+//					//executorServiceFreq = null;
+//				    awaitTerminationAfterShutdown(executorServiceCal);
 
 				} catch (Exception e) {
-					executorServiceFreq.shutdownNow();
-					executorServiceCal.shutdownNow();
+					//executorServiceFreq.shutdownNow();
+					//executorService.shutdownNow();
 					log.error(e);
 					e.printStackTrace();			
 				}
@@ -210,26 +262,52 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	/**
 	 * @return el valor de la constante para ajustar la frecuencia de la probabilidad conjunta de una tripleta
 	 */
-	public double getAdjustedFrequency() {
-		double adjustedFrequency = 1;
+	public double getAdjustedFrequency() {		
+		return this.adjustedFrequency;
+	}
+	
+	private void setTotalThreads(String totalThreads) {
+		boolean error = false;
+		int threads = 1;
+		
 		try {
-			adjustedFrequency = Double.parseDouble(properties.getProperty("adjustedFrequency"));
+			threads = Integer.parseInt(totalThreads);
 		} catch (Exception e) {
-
+			error = true;
+		}
+		
+		if (threads <= 0 || error) {
+			int availableProcessors = Runtime.getRuntime().availableProcessors();
+			if (availableProcessors > 1) {
+				threads = availableProcessors - 1;
+			}
+		}
+		this.totalThreads = threads;
+	}
+	
+	private void setAdjustedFrequency(String adjustedFrequency) {
+		try {
+			this.adjustedFrequency = Double.parseDouble(adjustedFrequency);
+			if (this.adjustedFrequency > 1 || this.adjustedFrequency < 0) {
+				this.adjustedFrequency = 1;
+			}
+		} catch (Exception e) {	
+			this.adjustedFrequency = 1;
 		}		
-		return adjustedFrequency;
 	}
 	
 	/**
-	 * @return un ThreadFactory para que personaliza los hilos a lanzar
+	 * Obtains an <code>ExecutorService</code> object to control the threads to be launched. The threads are configured with some properties.
+	 * @return an <code>ExecutorService</code> object
+	 * @see ThreadFactoryBuilder
 	 */
-	private ThreadFactory getThreadFactory(String name) {
+	private ExecutorService getExecutorService(String name) {
 		ThreadFactory threadFactory = new ThreadFactoryBuilder()
 				.setNameThread(name)
                 .setDaemon(false)
                 .setPriority(Thread.MAX_PRIORITY)
                 .build();
-		return threadFactory;
+		return Executors.newFixedThreadPool(getTotalThreads(), threadFactory);
 	}
 	
 	/**
@@ -280,29 +358,30 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	 */
 	private boolean prepareDataBase() {
 		boolean result = false;
-		Connection connection = null;
-		if (isSaveInDB()) {
-			String dbName = this.getDataBaseName();
-			if (dbName == null || dbName.equals(ConnectionFactory.DEFAULT_DB)) {
-				connection = ConnectionFactory.getInstance().getConnection();
-				if (connection != null) {
-					deletePreviousContent(connection);
-					result = true;
-				} else {
-					log.error("No se ha podido conectar a la base de datos por defecto.");
-				}
-			} else if (!dbName.equals(ConnectionFactory.DEFAULT_DB)) {
-				connection = ConnectionFactory.getInstance(dbName).getConnection();
-				if (connection != null) {
-					result = true;
-				} else {
-					log.error("No se ha podido conectar a la base de datos " + dbName);
-				}
-			} else {
-				throw new IllegalArgumentException("Error tratando nombre de base de datos");
-			}
-		}
-		return result;
+		return true;
+//		Connection connection = null;
+//		if (isSaveInDB()) {
+//			String dbName = this.getDataBaseName();
+//			if (dbName == null || dbName.equals(ConnectionFactory.DEFAULT_DB)) {
+//				connection = ConnectionFactory.getInstance().getConnection();
+//				if (connection != null) {
+//					deletePreviousContent(connection);
+//					result = true;
+//				} else {
+//					log.error("No se ha podido conectar a la base de datos por defecto.");
+//				}
+//			} else if (!dbName.equals(ConnectionFactory.DEFAULT_DB)) {
+//				connection = ConnectionFactory.getInstance(dbName).getConnection();
+//				if (connection != null) {
+//					result = true;
+//				} else {
+//					log.error("No se ha podido conectar a la base de datos " + dbName);
+//				}
+//			} else {
+//				throw new IllegalArgumentException("Error tratando nombre de base de datos");
+//			}
+//		}
+//		return result;
 	}
 	
 	/**
@@ -461,8 +540,6 @@ public class MutualInformationAlgorithm extends AbstractMutualInformationAlgorit
 	}
 
 	private String getCurrentTime() {
-		Date date = new Date();
-		DateFormat hourFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-		return hourFormat.format(date);
+		return (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss")).format(new Date());
 	}
 }
