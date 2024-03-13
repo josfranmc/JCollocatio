@@ -46,7 +46,7 @@ import org.josfranmc.collocatio.util.ThreadFactoryBuilder;
  * @see StanfordTriplesExtractor
  * @see TriplesCollection
  */
-public class MutualInformationAlgorithm implements ICollocationAlgorithm { //extends AbstractMutualInformationAlgorithm {
+public class MutualInformationAlgorithm implements ICollocationAlgorithm {
 
 	private static final Logger log = Logger.getLogger(MutualInformationAlgorithm.class);
 	

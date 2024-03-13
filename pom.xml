@@ -26,8 +26,7 @@
   </developers>
 
   <properties>
-    <jdk.target.version>1.8</jdk.target.version>
-    <jdk.source.version>1.8</jdk.source.version>
+    <maven.compiler.release>11</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <main.class>org.josfranmc.collocatio.JCollocatio</main.class>
   </properties>
@@ -83,12 +82,7 @@
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.6.1</version>
-            <configuration>
-                <source>${jdk.source.version}</source>
-                <target>${jdk.target.version}</target>
-                <failOnMissingWebXml>false</failOnMissingWebXml>
-            </configuration>
+            <version>3.8.1</version>
         </plugin>
           
         <plugin>
@@ -108,11 +102,12 @@
                     </manifestEntries>
                 </archive>     
             </configuration>
-        </plugin>   
+        </plugin>
 			
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
 		    <artifactId>maven-dependency-plugin</artifactId>
+		    <version>3.2.0</version>
             <executions>
                 <execution>
 		            <id>copy</id>
@@ -131,7 +126,7 @@
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
-            <version>3.2.1</version>
+            <version>3.2.4</version>
             <executions>
                 <execution>
                     <phase>package</phase>
@@ -154,6 +149,27 @@
                 </execution>
             </executions>
         </plugin>
+        
+        <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.7</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>prepare-agent</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>report</id>
+                    <phase>test</phase>
+                    <goals>
+                        <goal>report</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>              
+        
       </plugins>     
   </build>  
 </project>

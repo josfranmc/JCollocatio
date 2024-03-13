@@ -15,7 +15,7 @@ public class Collocation {
 	/**
 	 * Head (governor) word of the triple
 	 */
-	private String base;
+	private String head;
 	
 	/**
 	 * Dependent word of the triple
@@ -40,16 +40,16 @@ public class Collocation {
 	 * Returns the head (governor) word of the triple.
 	 * @return the head (governor) word of the triple
 	 */
-	public String getBase() {
-		return base;
+	public String getHead() {
+		return head;
 	}
 
 	/**
 	 * Sets the head (governor) word of the triple.
 	 * @param head word
 	 */
-	public void setBase(String base) {
-		this.base = base;
+	public void setHead(String head) {
+		this.head = head;
 	}
 
 	/**
@@ -91,7 +91,7 @@ public class Collocation {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((base == null) ? 0 : base.hashCode());
+		result = prime * result + ((head == null) ? 0 : head.hashCode());
 		result = prime * result + ((dependent == null) ? 0 : dependent.hashCode());
 		return result;
 	}
@@ -108,10 +108,10 @@ public class Collocation {
 		if (!(obj instanceof Collocation))
 			return false;
 		Collocation other = (Collocation) obj;
-		if (base == null) {
-			if (other.base != null)
+		if (head == null) {
+			if (other.head != null)
 				return false;
-		} else if (!base.equals(other.base))
+		} else if (!head.equals(other.head))
 			return false;
 		if (dependent == null) {
 			if (other.dependent != null)
@@ -126,6 +126,6 @@ public class Collocation {
 	 */
 	@Override
 	public String toString() {
-		return "(" + base + ", " + dependent + ")";
+		return "(" + head + ", " + dependent + ")";
 	}
 }

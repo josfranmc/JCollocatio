@@ -183,6 +183,6 @@ public class Triple implements Serializable {
 	 */
 	@Override
 	public String toString() {
-		return dependency + "(" + head + ", " + dependent + ")";
+		return "[" + dependency + "(" + head + ", " + dependent + ")" + "]";
 	}
 }

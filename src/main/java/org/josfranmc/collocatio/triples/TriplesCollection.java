@@ -66,7 +66,6 @@ public class TriplesCollection implements Iterable<TripleData> {
 	 * Default constructor. 
 	 */
 	public TriplesCollection() {
-		//triples = new HashMap<>();
 		triples = new HashMap<>();
 		totalTriplesByDependency = new HashMap<>();
 		headWords = new HashMap<>();

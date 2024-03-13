@@ -84,8 +84,6 @@ public class CollocationAlgorithmBuilder {
 			throw new IllegalArgumentException("Path to files to be process has not been established");
 		}
 
-		
-		
 		//properties.setProperty("saveInDb", Boolean.valueOf(properties.getProperty("saveInDb")));
 
 		ICollocationAlgorithm collocationAlgorithm = null;
